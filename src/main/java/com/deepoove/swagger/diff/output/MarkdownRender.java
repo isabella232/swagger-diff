@@ -24,6 +24,7 @@ import io.swagger.models.properties.Property;
 import static com.deepoove.swagger.diff.output.MarkdownRenderUtils.sort;
 import static com.deepoove.swagger.diff.output.MarkdownRenderUtils.prefix;
 import static com.deepoove.swagger.diff.output.MarkdownRenderUtils.sortedPrefixJoin;
+import static com.deepoove.swagger.diff.output.MarkdownRenderUtils.buildParentPhrase;;
 
 public class MarkdownRender implements Render {
 
@@ -211,9 +212,9 @@ public class MarkdownRender implements Render {
 	}
 
 	private List<String> ul_paramChangedVendorExts(String paramName, ChangedExtensionGroup group) {
-		updateKeysWithParam(paramName, group.getIncreasedVendorExtensions());
-		updateKeysWithParam(paramName, group.getMissingVendorExtensions());
-		updateKeysWithParam(paramName, group.getChangedVendorExtensions());
+		// updateKeysWithParam(paramName, group.getIncreasedVendorExtensions());
+		// updateKeysWithParam(paramName, group.getMissingVendorExtensions());
+		// updateKeysWithParam(paramName, group.getChangedVendorExtensions());
 
 		return ul_changedVendorExts(group);
 	}
@@ -263,11 +264,11 @@ public class MarkdownRender implements Render {
 		Property property = prop.getProperty();
 		String prefix = DELETE + CODE;
 		String desc = " //" + property.getDescription();
-		String postfix = CODE +
-				(null == property.getDescription() ? "" : desc);
+		String parentModel = buildParentPhrase(prop.getEl(), prop.getParentModelName());
+		String postfix = (null == property.getDescription() ? "" : desc);
 
 		StringBuffer sb = new StringBuffer("");
-		sb.append(prefix).append(prop.getEl())
+		sb.append(prefix).append(prop.getEl()).append(CODE).append(parentModel)
 				.append(postfix);
 		return sb.toString();
 	}
@@ -276,11 +277,11 @@ public class MarkdownRender implements Render {
 		Property property = prop.getProperty();
 		String prefix = INSERT + CODE;
 		String desc = " //" + property.getDescription();
-		String postfix = CODE +
-				(null == property.getDescription() ? "" : desc);
+		String parentModel = buildParentPhrase(prop.getEl(), prop.getParentModelName());
+		String postfix = (null == property.getDescription() ? "" : desc);
 
 		StringBuffer sb = new StringBuffer("");
-		sb.append(prefix).append(prop.getEl())
+		sb.append(prefix).append(prop.getEl()).append(CODE).append(parentModel)
 				.append(postfix);
 		return sb.toString();
 	}
@@ -289,10 +290,11 @@ public class MarkdownRender implements Render {
 		Property property = prop.getProperty();
 		String prefix = MODIFY + CODE;
 		String desc = " //" + property.getDescription();
-		String postfix =  CODE + (null == property.getDescription() ? "" : desc);
+		String parentModel = buildParentPhrase(prop.getEl(), prop.getParentModelName());
+		String postfix = (null == property.getDescription() ? "" : desc);
 
 		StringBuffer sb = new StringBuffer("");
-		sb.append(prefix).append(prop.getEl())
+		sb.append(prefix).append(prop.getEl()).append(CODE).append(parentModel)
 				.append(postfix);
 		return sb.toString();
 	}

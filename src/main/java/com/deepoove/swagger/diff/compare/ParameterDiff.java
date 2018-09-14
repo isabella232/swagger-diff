@@ -69,7 +69,8 @@ public class ParameterDiff {
 						String rightRef = ((RefModel) rightSchema).getSimpleRef();
 						Model leftModel = oldDedinitions.get(leftRef);
 						Model rightModel = newDedinitions.get(rightRef);
-						ModelDiff diff = ModelDiff.buildWithDefinition(oldDedinitions, newDedinitions).diff(leftModel, rightModel, name);
+						String aRef = leftRef != null ? leftRef : rightRef;
+						ModelDiff diff = ModelDiff.buildWithDefinition(oldDedinitions, newDedinitions).diff(leftModel, rightModel, aRef);
 						changedParameter.setIncreased(diff.getIncreased());
 						changedParameter.setMissing(diff.getMissing());
 						changedParameter.setChanged(diff.getChanged());

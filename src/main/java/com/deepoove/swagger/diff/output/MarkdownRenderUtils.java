@@ -1,6 +1,7 @@
 package com.deepoove.swagger.diff.output;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -33,6 +34,17 @@ public class MarkdownRenderUtils {
 
   public static String sortedPrefixJoin(List<String> lines, String prefix) {
     return LINE_JOINER.join(prefix(sort(lines), prefix)) + "\n";
+  }
+
+  public static String buildParentPhrase(String parentEl, String parentModel) {
+    if (parentModel == null || parentEl == null) {
+      return "";
+    }
+    String[] elPropNames = parentEl.split("\\.");
+    if (elPropNames.length > 0) {
+      return " (" + parentModel + "." + elPropNames[elPropNames.length - 1] + ")";
+    }
+    return "";
   }
   
   /*

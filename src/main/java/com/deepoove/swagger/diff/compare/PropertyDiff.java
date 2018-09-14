@@ -37,9 +37,14 @@ public class PropertyDiff {
 		if ((null == left || left instanceof RefProperty) && (null == right || right instanceof RefProperty)) {
 			Model leftModel = null == left ? null : oldDedinitions.get(((RefProperty) left).getSimpleRef());
 			Model rightModel = null == right ? null : newDedinitions.get(((RefProperty) right).getSimpleRef());
+			String ref = leftModel != null
+				? ((RefProperty) left).getSimpleRef()
+				: right != null
+					? ((RefProperty) right).getSimpleRef()
+					: null;
 			ModelDiff diff = ModelDiff
 					.buildWithDefinition(oldDedinitions, newDedinitions)
-					.diff(leftModel, rightModel);
+					.diff(leftModel, rightModel, ref);
 			increased.addAll(diff.getIncreased());
 			missing.addAll(diff.getMissing());
 			changed.addAll(diff.getChanged());
