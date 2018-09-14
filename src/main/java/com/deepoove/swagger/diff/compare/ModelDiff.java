@@ -44,14 +44,14 @@ public class ModelDiff {
 	}
 
 	public ModelDiff diff(Model leftModel, Model rightModel) {
-		return this.diff(leftModel, rightModel, null, new HashSet<Model>());
+		return this.diff(leftModel, rightModel, null, null, new HashSet<Model>());
 	}
 
-	public ModelDiff diff(Model leftModel, Model rightModel, String parentEl) {
-		return this.diff(leftModel, rightModel, parentEl, new HashSet<Model>());
+	public ModelDiff diff(Model leftModel, Model rightModel, String parentModel) {
+		return this.diff(leftModel, rightModel, null, parentModel, new HashSet<Model>());
 	}
 
-	private ModelDiff diff(Model leftModel, Model rightModel, String parentEl, Set<Model> visited) {
+	private ModelDiff diff(Model leftModel, Model rightModel, String parentEl, String parentModel, Set<Model> visited) {
 		// Stop recursing if both models are null
 		// OR either model is already contained in the visiting history
 		if ((null == leftModel && null == rightModel) || visited.contains(leftModel) || visited.contains(rightModel)) {
@@ -63,8 +63,8 @@ public class ModelDiff {
 		// Diff the properties
 		MapKeyDiff<String, Property> propertyDiff = MapKeyDiff.diff(leftProperties, rightProperties);
 
-		increased.addAll(convert2ElPropertys(propertyDiff.getIncreased(), parentEl));
-		missing.addAll(convert2ElPropertys(propertyDiff.getMissing(), parentEl));
+		increased.addAll(convert2ElPropertys(propertyDiff.getIncreased(), parentEl, parentModel));
+		missing.addAll(convert2ElPropertys(propertyDiff.getMissing(), parentEl, parentModel));
 
 		// Recursively find the diff between properties
 		List<String> sharedKey = propertyDiff.getSharedKey();
@@ -77,25 +77,25 @@ public class ModelDiff {
 				String rightRef = ((RefProperty) right).getSimpleRef();
 
 				diff(oldDedinitions.get(leftRef), newDedinitions.get(rightRef),
-						null == parentEl ? key : (parentEl + "." + key),
+						buildElString(parentEl, key), leftRef,
 						copyAndAdd(visited, leftModel, rightModel));
 
 			} else if (left != null && right != null && !left.equals(right)) {
 				// Add a changed ElProperty if not a Reference
-				changed.add(convert2ElProperty(key, parentEl, left));
+				changed.add(convert2ElProperty(key, parentEl, parentModel, left));
 			}
 		}
 		return this;
 	}
 
 	private Collection<? extends ElProperty> convert2ElPropertys(
-			Map<String, Property> propMap, String parentEl) {
+			Map<String, Property> propMap, String parentEl, String parentModel) {
 
 		List<ElProperty> result = new ArrayList<ElProperty>();
 		if (null == propMap) return result;
 
 		for (Entry<String, Property> entry : propMap.entrySet()) {
-			result.add(convert2ElProperty(entry.getKey(), parentEl, entry.getValue()));
+			result.add(convert2ElProperty(entry.getKey(), parentEl, parentModel, entry.getValue()));
 		}
 		return result;
 	}
@@ -104,10 +104,11 @@ public class ModelDiff {
 		return null == parentEl ? propName : (parentEl + "." + propName);
 	}
 
-	private ElProperty convert2ElProperty(String propName, String parentEl, Property property) {
+	private ElProperty convert2ElProperty(String propName, String parentEl, String parentModel, Property property) {
 		ElProperty pWithPath = new ElProperty();
 		pWithPath.setProperty(property);
 		pWithPath.setEl(buildElString(parentEl, propName));
+		pWithPath.setParentModelName(parentModel);
 		return pWithPath;
 	}
 

@@ -5,7 +5,7 @@ import java.util.List;
 
 import io.swagger.models.parameters.Parameter;
 
-public class ChangedOperation implements Changed {
+public class ChangedOperation extends ChangedExtensionGroup implements Changed {
 
 	private String summary;
 
@@ -76,13 +76,24 @@ public class ChangedOperation implements Changed {
 
 	public boolean isDiff() {
 		return !addParameters.isEmpty() || !missingParameters.isEmpty()
-				|| !changedParameter.isEmpty() || isDiffProp();
+				|| !changedParameter.isEmpty() || !addProps.isEmpty()
+				|| !missingProps.isEmpty() || vendorExtensionsAreDiff();
 	}
 	public boolean isDiffProp(){
 		return !addProps.isEmpty()
 				|| !missingProps.isEmpty()
-				|| !changedProps.isEmpty();
+				|| !changedProps.isEmpty()
+				|| propVendorExtsAreDiff();
 	}
+
+	public boolean propVendorExtsAreDiff() {
+		boolean accumulator = false;
+		for (ElProperty prop : changedProps) {
+			accumulator = accumulator || prop.vendorExtensionsAreDiff();
+		}
+		return accumulator;
+	}
+
 	public boolean isDiffParam(){
 		return !addParameters.isEmpty() || !missingParameters.isEmpty()
 				|| !changedParameter.isEmpty();
