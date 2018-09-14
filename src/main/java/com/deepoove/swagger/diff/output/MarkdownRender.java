@@ -3,6 +3,7 @@ package com.deepoove.swagger.diff.output;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -20,6 +21,10 @@ import io.swagger.models.HttpMethod;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.Property;
 
+import static com.deepoove.swagger.diff.output.MarkdownRenderUtils.sort;
+import static com.deepoove.swagger.diff.output.MarkdownRenderUtils.prefix;
+import static com.deepoove.swagger.diff.output.MarkdownRenderUtils.sortedPrefixJoin;
+
 public class MarkdownRender implements Render {
 
 	final String H6 = "###### ";
@@ -31,6 +36,11 @@ public class MarkdownRender implements Render {
 	final String PRE_LI = "    ";
 	final String LI = "* ";
 	final String HR = "---\n\n";
+
+	// Change strings
+	final String DELETE = "Removed ";
+	final String INSERT = "Added   ";
+	final String MODIFY = "Changed ";
 
 	String IT = "_";
 	String BD = "__";
@@ -102,7 +112,7 @@ public class MarkdownRender implements Render {
 		StringBuffer sb = new StringBuffer();
 
 		ChangedExtensionGroup topLevelExts = diff.getChangedVendorExtensions();
-		sb.append(ul_changedVendorExtsDeep(topLevelExts, ""));
+		sb.append(ul_changedVendorExtsDeep(topLevelExts, "")).append("\n");
 
 		List<ChangedEndpoint> changedEndpoints = diff.getChangedEndpoints();
 		String ol_changed = ol_changed(changedEndpoints);
@@ -124,8 +134,8 @@ public class MarkdownRender implements Render {
 					.getChangedOperations();
 
 			if (changedEndpoint.vendorExtensionsAreDiff()) {
-				sb.append(LI).append(pathUrl).append("\n");
-				sb.append(ul_changedVendorExts(changedEndpoint, PRE_LI));
+				sb.append(LI).append(pathUrl).append("\n")
+					.append(sortedPrefixJoin(ul_changedVendorExts(changedEndpoint), PRE_LI + LI));
 			}
 
 			for (Entry<HttpMethod, ChangedOperation> entry : changedOperations.entrySet()) {
@@ -137,12 +147,10 @@ public class MarkdownRender implements Render {
 
 				StringBuffer ul_detail = new StringBuffer();
 				if (changedOperation.vendorExtensionsAreDiff()) {
-					ul_detail.append(ul_changedVendorExts(changedOperation, detailPrefix));
+					ul_detail.append(sortedPrefixJoin(ul_changedVendorExts(changedOperation), detailPrefix + LI));
 				}
 				if (changedOperation.isDiffParam()) {
-					ul_detail.append(detailTitlePrefix)
-							.append(IT).append("Parameters").append(IT)
-							.append(ul_param(changedOperation));
+					ul_detail.append(ul_param(changedOperation));
 				}
 				if (changedOperation.isDiffProp()) {
 					ul_detail.append(detailTitlePrefix)
@@ -169,13 +177,14 @@ public class MarkdownRender implements Render {
 		StringBuffer sb = new StringBuffer();
 
 		if (group.vendorExtensionsAreDiffShallow()) {
-			sb.append(ul_changedVendorExts(group, pre));
+			List<String> changedVendorExts = sort(ul_changedVendorExts(group));
+			sb.append(sortedPrefixJoin(changedVendorExts, pre + LI));
 		}
 		for (Entry<String, ChangedExtensionGroup> entry : group.getChangedSubGroups().entrySet()) {
 			String key = entry.getKey();
 			ChangedExtensionGroup subgroup = entry.getValue();
 			if (subgroup.vendorExtensionsAreDiff()) {
-				sb.append(pre + LI + key + "\n");
+				sb.append("\n").append(prefix(key, pre + LI)).append("\n");
 				sb.append(ul_changedVendorExtsDeep(subgroup, pre + PRE_LI));
 			}
 		}
@@ -183,45 +192,30 @@ public class MarkdownRender implements Render {
 		return sb.toString();
 	}
 
-	private String ul_changedVendorExts(ChangedExtensionGroup group, String pre) {
-		StringBuffer sb = new StringBuffer();
+	private List<String> ul_changedVendorExts(ChangedExtensionGroup group) {
 		ArrayList<String> lines = new ArrayList<String>();
 		for (String key : group.getIncreasedVendorExtensions().keySet()) {
-			lines.add(pre + li_addVendorExt(key));
+			lines.add(li_addVendorExt(key));
 		}
 		for (String key : group.getMissingVendorExtensions().keySet()) {
-			lines.add(pre + li_missingVendorExt(key));
+			lines.add(li_missingVendorExt(key));
 		}
 		for (String key : group.getChangedVendorExtensions().keySet()) {
-			lines.add(pre + li_changedVendorExt(key));
+			lines.add(li_changedVendorExt(key));
 		}
-		Joiner joiner = Joiner.on("\n");
-
-		return sb.append(joiner.join(sort(lines))).toString();
-	}
-
-	private List<String> sort(List<String> lines) {
-		Collections.sort(lines, new Comparator<String>() {
-			@Override
-			public int compare(String s1, String s2) {
-				return s1.substring(7).compareTo(s2.substring(7));
-			}
-		});
-		Collections.sort(lines, new Comparator<String>() {
-			@Override
-			public int compare(String s1, String s2) {
-				return s1.compareTo(s2);
-			}
-		});
 		return lines;
 	}
 
-	private String ul_paramChangedVendorExts(String paramName, ChangedExtensionGroup group, String pre) {
+	private String ul_changedVendorExts(ChangedExtensionGroup group, String pre) {
+		return sortedPrefixJoin(ul_changedVendorExts(group), pre);
+	}
+
+	private List<String> ul_paramChangedVendorExts(String paramName, ChangedExtensionGroup group) {
 		updateKeysWithParam(paramName, group.getIncreasedVendorExtensions());
 		updateKeysWithParam(paramName, group.getMissingVendorExtensions());
 		updateKeysWithParam(paramName, group.getChangedVendorExtensions());
 
-		return ul_changedVendorExts(group, pre);
+		return ul_changedVendorExts(group);
 	}
 
 	private <V> void updateKeysWithParam(String prepend, Map<String, V> map) {
@@ -232,42 +226,42 @@ public class MarkdownRender implements Render {
 	}
 
 	private String li_addVendorExt(String key) {
-		return LI + "Insert " + CODE + key + CODE + "\n";
+		return INSERT + CODE + key + CODE;
 	}
 
 	private String li_missingVendorExt(String key) {
-		return LI + "Delete " + CODE + key + CODE + "\n";
+		return DELETE + CODE + key + CODE;
 	}
 
 	private String li_changedVendorExt(String key) {
-		return LI + "Modify " + CODE + key + CODE + "\n";
+		return MODIFY + CODE + key + CODE;
 	}
 
 	private String ul_response(ChangedOperation changedOperation) {
 		List<ElProperty> addProps = changedOperation.getAddProps();
 		List<ElProperty> delProps = changedOperation.getMissingProps();
 		List<ElProperty> changedProps = changedOperation.getChangedProps();
-		StringBuffer sb = new StringBuffer("\n");
+		List<String> propLines = new ArrayList<String>();
 
 		String prefix = PRE_LI + PRE_LI + LI;
 		for (ElProperty prop : addProps) {
-			sb.append(prefix).append(li_addProp(prop) + "\n");
+			propLines.add(li_addProp(prop));
 		}
 		for (ElProperty prop : delProps) {
-			sb.append(prefix).append(li_missingProp(prop) + "\n");
+			propLines.add(li_missingProp(prop));
 		}
 		for (ElProperty prop : changedProps) {
-			sb.append(prefix).append(li_changedProp(prop) + "\n");
+			propLines.add(li_changedProp(prop));
 			if (prop.vendorExtensionsAreDiff()) {
-				sb.append(prefix).append(ul_changedVendorExts(prop, PRE_LI + PRE_LI));
+				propLines.addAll(ul_changedVendorExts(prop));
 			}
 		}
-		return sb.toString();
+		return "\n" + sortedPrefixJoin(propLines, prefix);
 	}
 
 	private String li_missingProp(ElProperty prop) {
 		Property property = prop.getProperty();
-		String prefix = "Delete " + CODE;
+		String prefix = DELETE + CODE;
 		String desc = " //" + property.getDescription();
 		String postfix = CODE +
 				(null == property.getDescription() ? "" : desc);
@@ -280,7 +274,7 @@ public class MarkdownRender implements Render {
 
 	private String li_addProp(ElProperty prop) {
 		Property property = prop.getProperty();
-		String prefix = "Insert " + CODE;
+		String prefix = INSERT + CODE;
 		String desc = " //" + property.getDescription();
 		String postfix = CODE +
 				(null == property.getDescription() ? "" : desc);
@@ -293,7 +287,7 @@ public class MarkdownRender implements Render {
 
 	private String li_changedProp(ElProperty prop) {
 		Property property = prop.getProperty();
-		String prefix = "Modify " + CODE;
+		String prefix = MODIFY + CODE;
 		String desc = " //" + property.getDescription();
 		String postfix =  CODE + (null == property.getDescription() ? "" : desc);
 
@@ -304,51 +298,79 @@ public class MarkdownRender implements Render {
 	}
 
 	private String ul_param(ChangedOperation changedOperation) {
+		String typePrefix = PRE_LI + LI;
+		String prefix = PRE_LI + typePrefix;
+
 		List<Parameter> addParameters = changedOperation.getAddParameters();
 		List<Parameter> delParameters = changedOperation.getMissingParameters();
-		List<ChangedParameter> changedParameters = changedOperation
-				.getChangedParameter();
-
-		String prefix = PRE_LI + PRE_LI + LI;
+		List<ChangedParameter> changedParameters = changedOperation.getChangedParameter();
+		Map<String, List<String>> paramLineMap = new LinkedHashMap<String,List<String>>();
 
 		StringBuffer sb = new StringBuffer("\n");
 
 		for (Parameter param : addParameters) {
-			sb.append(prefix).append(li_addParam(param) + "\n");
+			String in = param.getIn();
+			if (!paramLineMap.containsKey(in)) {
+				paramLineMap.put(in, new ArrayList<String>());
+			}
+			paramLineMap.get(in).add(li_addParam(param));
 		}
+		// Add props and vendor extensions
 		for (ChangedParameter param : changedParameters) {
+			boolean changeVendorExts = param.vendorExtensionsAreDiff();
 			List<ElProperty> increased = param.getIncreased();
+			List<ElProperty> missing = param.getMissing();
+			List<ElProperty> changed = param.getChanged();
+			Parameter left = param.getLeftParameter();
+			String in = left.getIn();
+			if (!paramLineMap.containsKey(in)) {
+				paramLineMap.put(in, new ArrayList<String>());
+			}
 			for (ElProperty prop : increased) {
-				sb.append(prefix).append(li_addProp(prop) + "\n");
+				paramLineMap
+				.get(left.getIn())
+				.add(li_addProp(prop));
+			}
+			for (ElProperty prop : missing) {
+				paramLineMap.get(left.getIn()).add(li_missingProp(prop));
+			}
+			for (ElProperty prop : changed) {
+				paramLineMap.get(left.getIn()).add(li_changedProp(prop));
+			}
+			if (changeVendorExts) {
+				paramLineMap.get(left.getIn())
+					.addAll(ul_paramChangedVendorExts(left.getName(), param));
 			}
 		}
+
+		for (Parameter param : delParameters) {
+			String in = param.getIn();
+			if (!paramLineMap.containsKey(in)) {
+				paramLineMap.put(in, new ArrayList<String>());
+			}
+			paramLineMap.get(param.getIn()).add(li_missingParam(param));
+		}
+
+		for (String in : paramLineMap.keySet()) {
+			String title = IT + in.substring(0, 1).toUpperCase() + in.substring(1) + " Parameters" + IT;
+			sb.append(prefix(title, typePrefix)).append("\n")
+				.append(sortedPrefixJoin(paramLineMap.get(in), prefix));
+
+		}
+
 		for (ChangedParameter param : changedParameters) {
 			boolean changeRequired = param.isChangeRequired();
 			boolean changeDescription = param.isChangeDescription();
 			boolean changeVendorExts = param.vendorExtensionsAreDiff();
-
 			if (changeRequired || changeDescription || changeVendorExts) {
 				sb.append(li_changedParam(param));
 			}
-		}
-		for (ChangedParameter param : changedParameters) {
-			List<ElProperty> missing = param.getMissing();
-			List<ElProperty> changed = param.getChanged();
-			for (ElProperty prop : missing) {
-				sb.append(prefix).append(li_missingProp(prop) + "\n");
-			}
-			for (ElProperty prop : changed) {
-				sb.append(prefix).append(li_changedProp(prop) + "\n");
-			}
-		}
-		for (Parameter param : delParameters) {
-			sb.append(prefix).append(li_missingParam(param) + "\n");
 		}
 		return sb.toString();
 	}
 
 	private String li_addParam(Parameter param) {
-		String prefix = "Insert " + CODE;
+		String prefix = INSERT + CODE;
 		String desc = " //" + param.getDescription();
 		String postfix = CODE +
 				(null == param.getDescription() ? "" : desc);
@@ -361,7 +383,7 @@ public class MarkdownRender implements Render {
 
 	private String li_missingParam(Parameter param) {
 		StringBuffer sb = new StringBuffer("");
-		String prefix = "Delete " +  CODE;
+		String prefix = DELETE +  CODE;
 		String desc = " //" + param.getDescription();
 		String postfix = CODE + 
 				(null == param.getDescription() ? "" : desc);
@@ -373,16 +395,12 @@ public class MarkdownRender implements Render {
 	private String li_changedParam(ChangedParameter changeParam) {
 		boolean changeRequired = changeParam.isChangeRequired();
 		boolean changeDescription = changeParam.isChangeDescription();
-		boolean vendorExtsChanged = changeParam.vendorExtensionsAreDiff();
 		Parameter rightParam = changeParam.getRightParameter();
 		Parameter leftParam = changeParam.getLeftParameter();
 
 		String prefix = PRE_LI + PRE_LI;
 
 		StringBuffer sb = new StringBuffer("");
-		if (vendorExtsChanged) {
-			sb.append(ul_paramChangedVendorExts(rightParam.getName(), changeParam, prefix));
-		}
 		if (changeRequired) {
 			String oldValue = (rightParam.getRequired() ? "required" : "not required");
 			String newValue = (!rightParam.getRequired() ? "required" : "not required");
@@ -396,5 +414,4 @@ public class MarkdownRender implements Render {
 		}
 		return sb.append("\n").toString();
 	}
-
 }
