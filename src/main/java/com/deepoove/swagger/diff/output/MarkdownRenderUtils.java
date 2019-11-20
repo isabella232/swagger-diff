@@ -1,7 +1,6 @@
 package com.deepoove.swagger.diff.output;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -10,9 +9,10 @@ import com.google.common.base.Joiner;
 
 public class MarkdownRenderUtils {
 
-  private static Joiner LINE_JOINER = Joiner.on("\n");
+  private static final Joiner LINE_JOINER = Joiner.on("\n");
 
-  private MarkdownRenderUtils() {}
+  private MarkdownRenderUtils() {
+  }
 
   public static List<String> prefix(List<String> lines, String pre) {
     List<String> prefixedLines = new ArrayList<String>();
@@ -29,7 +29,7 @@ public class MarkdownRenderUtils {
   public static List<String> sort(List<String> lines) {
     Collections.sort(lines, propertyComparator);
     Collections.sort(lines, actionComparator);
-		return lines;
+    return lines;
   }
 
   public static String sortedPrefixJoin(List<String> lines, String prefix) {
@@ -46,18 +46,18 @@ public class MarkdownRenderUtils {
     }
     return "";
   }
-  
+
   /*
    * Used for sorting lines by property. 7 is taken from the
    * width of the actions (as seen below). Right now it's relying on
    * the width of the names, for simplicity.
    * This should probably change down the road
-   * 
+   *
    *   |<- 7 ->|
    *   |Insert |
    *   |Delete |
    *   |Modify |
-   *   
+   *
    */
   private static Comparator<String> propertyComparator = new Comparator<String>() {
     @Override

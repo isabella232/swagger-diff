@@ -20,7 +20,9 @@ public class MapDiff<K, V> {
   public static <K, V> MapDiff<K, V> diff(Map<K, V> mapLeft,
                                           Map<K, V> mapRight) {
     MapDiff<K, V> instance = new MapDiff<K, V>();
-    if (null == mapLeft && null == mapRight) return instance;
+    if (null == mapLeft && null == mapRight) {
+      return instance;
+    }
 
     if (null == mapLeft) {
       instance.increased = mapRight;
