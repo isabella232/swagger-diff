@@ -23,8 +23,6 @@ import io.swagger.models.HttpMethod;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.Property;
 
-;
-
 public class MarkdownRender implements Render {
 
   static final String H6 = "###### ";
