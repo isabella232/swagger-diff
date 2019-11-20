@@ -211,10 +211,6 @@ public class MarkdownRender implements Render {
     return lines;
   }
 
-  private String ulChangedVendorExts(ChangedExtensionGroup group, String pre) {
-    return sortedPrefixJoin(ulChangedVendorExts(group), pre);
-  }
-
   private List<String> ulParamChangedVendorExts(String paramName, ChangedExtensionGroup group) {
     // updateKeysWithParam(paramName, group.getIncreasedVendorExtensions());
     // updateKeysWithParam(paramName, group.getMissingVendorExtensions());
@@ -357,10 +353,10 @@ public class MarkdownRender implements Render {
       paramLineMap.get(param.getIn()).add(liMissingParam(param));
     }
 
-    for (String in : paramLineMap.keySet()) {
-      String title = italic + in.substring(0, 1).toUpperCase() + in.substring(1) + " Parameters" + italic;
+    for (Entry<String, List<String>> entry : paramLineMap.entrySet()) {
+      String title = italic + entry.getKey().substring(0, 1).toUpperCase() + entry.getKey().substring(1) + " Parameters" + italic;
       sb.append(prefix(title, typePrefix)).append("\n")
-          .append(sortedPrefixJoin(paramLineMap.get(in), prefix));
+          .append(sortedPrefixJoin(entry.getValue(), prefix));
 
     }
 

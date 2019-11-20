@@ -13,8 +13,6 @@ import com.deepoove.swagger.diff.model.Endpoint;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.swagger.models.Swagger;
-import io.swagger.models.auth.AuthorizationValue;
-import io.swagger.parser.SwaggerCompatConverter;
 import io.swagger.parser.SwaggerParser;
 
 public class SwaggerDiff {
@@ -33,34 +31,6 @@ public class SwaggerDiff {
   private ChangedExtensionGroup changedVendorExtensions;
 
   /**
-   * compare two swagger 1.x doc
-   *
-   * @param oldSpec old api-doc location:Json or Http
-   * @param newSpec new api-doc location:Json or Http
-   */
-  public static SwaggerDiff compareV1(String oldSpec, String newSpec) {
-    return compareV1(oldSpec, newSpec, false);
-  }
-
-  public static SwaggerDiff compareV1(String oldSpec, String newSpec, boolean withExtensions) {
-    return compare(oldSpec, newSpec, null, null, withExtensions);
-  }
-
-  /**
-   * compare two swagger v2.0 doc
-   *
-   * @param oldSpec old api-doc location:Json or Http
-   * @param newSpec new api-doc location:Json or Http
-   */
-  public static SwaggerDiff compareV2(String oldSpec, String newSpec) {
-    return compareV2(oldSpec, newSpec, false);
-  }
-
-  public static SwaggerDiff compareV2(String oldSpec, String newSpec, boolean withExtensions) {
-    return compare(oldSpec, newSpec, null, SWAGGER_VERSION_V2, withExtensions);
-  }
-
-  /**
    * Compare two swagger v2.0 docs by JsonNode
    *
    * @param oldSpec old Swagger specification document in v2.0 format as a JsonNode
@@ -72,39 +42,6 @@ public class SwaggerDiff {
 
   public static SwaggerDiff compareV2(JsonNode oldSpec, JsonNode newSpec, boolean withExtensions) {
     return new SwaggerDiff(oldSpec, newSpec).compare(withExtensions);
-  }
-
-  public static SwaggerDiff compare(String oldSpec, String newSpec,
-                                    List<AuthorizationValue> auths, String version, boolean withExtensions) {
-    return new SwaggerDiff(oldSpec, newSpec, auths, version).compare(withExtensions);
-  }
-
-  /**
-   * @param oldSpec
-   * @param newSpec
-   * @param auths
-   * @param version
-   */
-  private SwaggerDiff(String oldSpec, String newSpec, List<AuthorizationValue> auths,
-                      String version) {
-    if (SWAGGER_VERSION_V2.equals(version)) {
-      SwaggerParser swaggerParser = new SwaggerParser();
-      oldSpecSwagger = swaggerParser.read(oldSpec, auths, true);
-      newSpecSwagger = swaggerParser.read(newSpec, auths, true);
-    } else {
-      SwaggerCompatConverter swaggerCompatConverter = new SwaggerCompatConverter();
-      try {
-        oldSpecSwagger = swaggerCompatConverter.read(oldSpec, auths);
-        newSpecSwagger = swaggerCompatConverter.read(newSpec, auths);
-      } catch (IOException e) {
-        logger.error("cannot read api-doc from spec[version_v1.x]", e);
-        return;
-      }
-    }
-    if (null == oldSpecSwagger || null == newSpecSwagger) {
-      throw new RuntimeException(
-          "cannot read api-doc from spec.");
-    }
   }
 
   private SwaggerDiff(JsonNode oldSpec, JsonNode newSpec) {
