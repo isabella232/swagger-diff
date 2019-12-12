@@ -53,6 +53,7 @@ public class PropertyDiff {
       elProperty.setEl(String.format("%s -> %s", left.getType(), right.getType()));
       elProperty.setParentModelName("response");
       elProperty.setProperty(left);
+      elProperty.setResponseTypeChanged(true);
       changed.add(elProperty);
     }
     return this;
