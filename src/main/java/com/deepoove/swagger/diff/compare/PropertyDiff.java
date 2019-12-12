@@ -49,7 +49,11 @@ public class PropertyDiff {
       missing.addAll(diff.getMissing());
       changed.addAll(diff.getChanged());
     } else if (left != null && right != null && !left.equals(right)) {
-      changed.add(this.convert2ElProperty("Response type", null, null, left));
+      ElProperty elProperty = new ElProperty();
+      elProperty.setEl(String.format("%s -> %s", left.getType(), right.getType()));
+      elProperty.setParentModelName("response");
+      elProperty.setProperty(left);
+      changed.add(elProperty);
     }
     return this;
   }
@@ -78,15 +82,4 @@ public class PropertyDiff {
     this.changed = changed;
   }
 
-  private String buildElString(String parentEl, String propName) {
-    return null == parentEl ? propName : (parentEl + "." + propName);
-  }
-
-  public ElProperty convert2ElProperty(String propName, String parentEl, String parentModel, Property property) {
-    ElProperty pWithPath = new ElProperty();
-    pWithPath.setProperty(property);
-    pWithPath.setEl(buildElString(parentEl, propName));
-    pWithPath.setParentModelName(parentModel);
-    return pWithPath;
-  }
 }
