@@ -48,6 +48,13 @@ public class PropertyDiff {
       increased.addAll(diff.getIncreased());
       missing.addAll(diff.getMissing());
       changed.addAll(diff.getChanged());
+    } else if (left != null && right != null && !left.equals(right)) {
+      ElProperty elProperty = new ElProperty();
+      elProperty.setEl(String.format("%s -> %s", left.getType(), right.getType()));
+      elProperty.setParentModelName("response");
+      elProperty.setProperty(left);
+      elProperty.setResponseTypeChanged(true);
+      changed.add(elProperty);
     }
     return this;
   }
@@ -75,4 +82,5 @@ public class PropertyDiff {
   public void setChanged(List<ElProperty> changed) {
     this.changed = changed;
   }
+
 }

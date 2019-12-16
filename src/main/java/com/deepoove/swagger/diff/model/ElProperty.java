@@ -11,6 +11,7 @@ public class ElProperty extends ChangedExtensionGroup {
   private String el;
   private String parentModelName;
   private Property property;
+  private boolean responseTypeChanged;
 
   public Property getProperty() {
     return property;
@@ -36,4 +37,11 @@ public class ElProperty extends ChangedExtensionGroup {
     this.el = el;
   }
 
+  public boolean getResponseTypeChanged() {
+    return responseTypeChanged;
+  }
+
+  public void setResponseTypeChanged(boolean responseTypeChanged) {
+    this.responseTypeChanged = responseTypeChanged;
+  }
 }
