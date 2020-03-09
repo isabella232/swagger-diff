@@ -93,7 +93,7 @@ public class SpecificationDiff extends ChangedExtensionGroup {
             .diff(oldParameters, newParameters);
         changedOperation.setAddParameters(parameterDiff.getIncreased());
         changedOperation.setMissingParameters(parameterDiff.getMissing());
-        changedOperation.setChangedParameter(parameterDiff.getChanged());
+        changedOperation.setChangedParameters(parameterDiff.getChanged());
 
         for (ChangedParameter param : parameterDiff.getChanged()) {
           param.setVendorExtsFromGroup(extDiffer.diff(param.getLeftParameter(), param.getRightParameter()));

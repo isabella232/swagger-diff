@@ -1,6 +1,8 @@
 package com.deepoove.swagger.diff.model;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import io.swagger.models.parameters.Parameter;
@@ -81,5 +83,18 @@ public class ChangedParameter extends ChangedExtensionGroup implements Changed {
 
   public void setChanged(List<ElProperty> changed) {
     this.changed = changed;
+  }
+
+  public boolean isOnlyCosmeticChanges() {
+    return this.increased.isEmpty() && this.missing.isEmpty() &&
+        !leftParameter.getDescription().equals(rightParameter.getDescription()) &&
+        leftParameter.getAllowEmptyValue().equals(rightParameter.getAllowEmptyValue()) &&
+        leftParameter.getRequired() == rightParameter.getRequired() &&
+        leftParameter.getAccess().equals(rightParameter.getAccess()) &&
+        leftParameter.getIn().equals(rightParameter.getIn()) &&
+        leftParameter.isReadOnly().equals(rightParameter.isReadOnly()) &&
+        leftParameter.getName().equals(rightParameter.getName()) &&
+        leftParameter.getPattern().equals(rightParameter.getPattern()) &&
+        leftParameter.getVendorExtensions().equals(rightParameter.getVendorExtensions());
   }
 }

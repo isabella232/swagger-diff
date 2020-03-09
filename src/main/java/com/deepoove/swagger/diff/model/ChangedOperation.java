@@ -12,7 +12,7 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
   private List<Parameter> addParameters = new ArrayList<Parameter>();
   private List<Parameter> missingParameters = new ArrayList<Parameter>();
 
-  private List<ChangedParameter> changedParameter = new ArrayList<ChangedParameter>();
+  private List<ChangedParameter> changedParameters = new ArrayList<ChangedParameter>();
 
   private List<ElProperty> addProps = new ArrayList<ElProperty>();
   private List<ElProperty> missingProps = new ArrayList<ElProperty>();
@@ -34,12 +34,12 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
     this.missingParameters = missingParameters;
   }
 
-  public List<ChangedParameter> getChangedParameter() {
-    return changedParameter;
+  public List<ChangedParameter> getChangedParameters() {
+    return changedParameters;
   }
 
-  public void setChangedParameter(List<ChangedParameter> changedParameter) {
-    this.changedParameter = changedParameter;
+  public void setChangedParameters(List<ChangedParameter> changedParameters) {
+    this.changedParameters = changedParameters;
   }
 
   public List<ElProperty> getAddProps() {
@@ -76,10 +76,11 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
 
   public boolean isDiff() {
     return !addParameters.isEmpty() || !missingParameters.isEmpty()
-        || !changedParameter.isEmpty() || !addProps.isEmpty()
+        || !changedParameters.isEmpty() || !addProps.isEmpty()
         || !missingProps.isEmpty() || !changedProps.isEmpty() || vendorExtensionsAreDiff();
   }
-  public boolean isDiffProp(  ) {
+
+  public boolean isDiffProp() {
     return !addProps.isEmpty()
         || !missingProps.isEmpty()
         || !changedProps.isEmpty()
@@ -94,8 +95,16 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
     return accumulator;
   }
 
-  public boolean isDiffParam(  ) {
+  public boolean isDiffParam() {
     return !addParameters.isEmpty() || !missingParameters.isEmpty()
-        || !changedParameter.isEmpty();
+        || !changedParameters.isEmpty();
+  }
+
+  public boolean isOnlyCosmeticChanges() {
+    if (addParameters.isEmpty() && missingParameters.isEmpty() && addProps.isEmpty() && missingProps.isEmpty()) {
+      return changedParameters.stream()
+          .anyMatch(param -> !param.isOnlyCosmeticChanges());
+    }
+    return false;
   }
 }
