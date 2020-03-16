@@ -17,8 +17,8 @@ import io.swagger.models.properties.RefProperty;
 
 /**
  * compare two model
+ *
  * @author Sayi
- * @version
  */
 public class ModelDiff {
 
@@ -26,20 +26,25 @@ public class ModelDiff {
   private List<ElProperty> missing;
   private List<ElProperty> changed;
 
-  Map<String, Model> oldDedinitions;
-  Map<String, Model> newDedinitions;
+  Map<String, Model> oldDefinitions;
+  Map<String, Model> newDefinitions;
+
+  private boolean hasOnlyCosmeticChanges;
+  private boolean hasACosmeticChange;
 
   private ModelDiff() {
     increased = new ArrayList<ElProperty>();
     missing = new ArrayList<ElProperty>();
     changed = new ArrayList<ElProperty>();
+    hasOnlyCosmeticChanges = false;
+    hasACosmeticChange = false;
   }
 
   public static ModelDiff buildWithDefinition(Map<String, Model> left,
-      Map<String, Model> right) {
+                                              Map<String, Model> right) {
     ModelDiff diff = new ModelDiff();
-    diff.oldDedinitions = left;
-    diff.newDedinitions = right;
+    diff.oldDefinitions = left;
+    diff.newDefinitions = right;
     return diff;
   }
 
@@ -76,11 +81,33 @@ public class ModelDiff {
         String leftRef = ((RefProperty) left).getSimpleRef();
         String rightRef = ((RefProperty) right).getSimpleRef();
 
-        diff(oldDedinitions.get(leftRef), newDedinitions.get(rightRef),
+        diff(oldDefinitions.get(leftRef), newDefinitions.get(rightRef),
             buildElString(parentEl, key), leftRef,
             copyAndAdd(visited, leftModel, rightModel));
 
       } else if (left != null && right != null && !left.equals(right)) {
+        if (increased.isEmpty() && missing.isEmpty() && hasOnlyCosmeticChanges == hasACosmeticChange) {
+          if (!((left.getDescription() == null && right.getDescription() == null || left.getDescription().equals(right.getDescription())) &&
+              (left.getExample() == null && right.getExample() == null || left.getExample().equals(right.getExample()))) &&
+              (left.getAllowEmptyValue() == null && right.getAllowEmptyValue() == null || left.getAllowEmptyValue().equals(right.getAllowEmptyValue())) &&
+              left.getRequired() == right.getRequired() &&
+              (left.getAccess() == null && right.getAccess() == null || left.getAccess().equals(right.getAccess())) &&
+              (left.getTitle() == null && right.getTitle() == null || left.getTitle().equals(right.getTitle())) &&
+              (left.getReadOnly() == null && right.getReadOnly() == null || left.getReadOnly().equals(right.getReadOnly())) &&
+              (left.getName() == null && right.getName() == null || left.getName().equals(right.getName())) &&
+              (left.getType() == null && right.getType() == null || left.getType().equals(right.getType())) &&
+              (left.getFormat() == null && right.getFormat() == null || left.getFormat().equals(right.getFormat())) &&
+              (left.getVendorExtensions() == null && right.getVendorExtensions() == null || left.getVendorExtensions().equals(right.getVendorExtensions())) &&
+              (left.getPosition() == null && right.getPosition() == null || left.getPosition().equals(right.getPosition()))) {
+            if (!hasACosmeticChange) {
+              hasACosmeticChange = true;
+              hasOnlyCosmeticChanges = true;
+            }
+          } else {
+            hasOnlyCosmeticChanges = false;
+          }
+        }
+
         // Add a changed ElProperty if not a Reference
         changed.add(convert2ElProperty(key, parentEl, parentModel, left));
       }
@@ -142,5 +169,9 @@ public class ModelDiff {
 
   public void setChanged(List<ElProperty> changed) {
     this.changed = changed;
+  }
+
+  public boolean hasOnlyCosmeticChanges() {
+    return hasOnlyCosmeticChanges;
   }
 }

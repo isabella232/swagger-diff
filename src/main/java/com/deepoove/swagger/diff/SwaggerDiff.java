@@ -29,7 +29,7 @@ public class SwaggerDiff {
 
   private ChangedExtensionGroup changedVendorExtensions;
 
-  private boolean isOnlyCosmeticChanges;
+  private boolean hasOnlyCosmeticChanges;
 
   /**
    * Compare two swagger v2.0 docs by JsonNode
@@ -61,7 +61,7 @@ public class SwaggerDiff {
     this.missingEndpoints = diff.getMissingEndpoints();
     this.changedEndpoints = diff.getChangedEndpoints();
     this.changedVendorExtensions = diff;
-    this.isOnlyCosmeticChanges = diff.isOnlyCosmeticChanges();
+    this.hasOnlyCosmeticChanges = diff.hasOnlyCosmeticChanges();
     return this;
   }
 
@@ -89,5 +89,5 @@ public class SwaggerDiff {
     return newSpecSwagger.getInfo().getVersion();
   }
 
-  public boolean isOnlyCosmeticChanges() { return isOnlyCosmeticChanges; }
+  public boolean hasOnlyCosmeticChanges() { return hasOnlyCosmeticChanges; }
 }

@@ -23,6 +23,7 @@ public class SwaggerDiffTest {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
 
   final String SWAGGER_V2_DOC1 = "petstore_v2_1.json";
+  final String SWAGGER_V2_DOC1_COSMETIC = "petstore_v2_1_cosmetic.json";
   final String SWAGGER_V2_DOC2 = "petstore_v2_2.json";
   final String SWAGGER_V2_EMPTY_DOC = "petstore_v2_empty.json";
 
@@ -81,6 +82,12 @@ public class SwaggerDiffTest {
         assertVendorExtensionsAreDiff(changedOperation);
       }
     }
+  }
+
+  @Test
+  public void cosmeticChanges() throws IOException {
+    SwaggerDiff diff = SwaggerDiff.compareV2(loadSpec(SWAGGER_V2_DOC1), loadSpec(SWAGGER_V2_DOC1_COSMETIC), true);
+    Assert.assertTrue(diff.hasOnlyCosmeticChanges());
   }
 
   private void assertEqual(SwaggerDiff diff) {

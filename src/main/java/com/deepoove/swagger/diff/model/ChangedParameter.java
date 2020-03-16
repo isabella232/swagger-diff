@@ -64,7 +64,7 @@ public class ChangedParameter extends ChangedExtensionGroup implements Changed {
         || vendorExtensionsAreDiff();
   }
 
-  public boolean isMeaningfulChanges() {
+  public boolean hasOnlyCosmeticChanges() {
     return !isChangeRequired
         && isChangeDescription()
         && increased.isEmpty()
@@ -97,7 +97,7 @@ public class ChangedParameter extends ChangedExtensionGroup implements Changed {
     this.changed = changed;
   }
 
-//  public boolean isOnlyCosmeticChanges() {
+//  public boolean hasOnlyCosmeticChanges() {
 //    return this.increased.isEmpty() && this.missing.isEmpty() &&
 //        !leftParameter.getDescription().equals(rightParameter.getDescription()) &&
 //        leftParameter.getAllowEmptyValue().equals(rightParameter.getAllowEmptyValue()) &&
