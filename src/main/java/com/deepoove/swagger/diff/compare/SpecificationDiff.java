@@ -33,6 +33,7 @@ public class SpecificationDiff extends ChangedExtensionGroup {
   private List<Endpoint> newEndpoints;
   private List<Endpoint> missingEndpoints;
   private List<ChangedEndpoint> changedEndpoints;
+  private boolean isOnlyCosmeticChanges;
 
   private SpecificationDiff() {
   }
@@ -78,6 +79,7 @@ public class SpecificationDiff extends ChangedExtensionGroup {
       List<HttpMethod> sharedMethods = operationDiff.getSharedKey();
       Map<HttpMethod, ChangedOperation> operas = new HashMap<HttpMethod, ChangedOperation>();
       ChangedOperation changedOperation = null;
+      instance.isOnlyCosmeticChanges = true;
       for (HttpMethod method : sharedMethods) {
         changedOperation = new ChangedOperation();
         Operation oldOperation = oldOperationMap.get(method);
@@ -114,6 +116,9 @@ public class SpecificationDiff extends ChangedExtensionGroup {
         if (changedOperation.isDiff()) {
           operas.put(method, changedOperation);
         }
+        if (!changedOperation.isOnlyCosmeticChanges()) {
+          instance.isOnlyCosmeticChanges = false;
+        }
       }
       changedEndpoint.setChangedOperations(operas);
 
@@ -134,7 +139,6 @@ public class SpecificationDiff extends ChangedExtensionGroup {
         extDiffer.diffTagGroup(mapTagsByName(oldSpec.getTags()), mapTagsByName(newSpec.getTags())));
 
     return instance;
-
   }
 
   private static Map<String, Tag> mapTagsByName(List<Tag> tags) {
@@ -212,5 +216,9 @@ public class SpecificationDiff extends ChangedExtensionGroup {
 
   public List<ChangedEndpoint> getChangedEndpoints() {
     return changedEndpoints;
+  }
+
+  public boolean isOnlyCosmeticChanges() {
+    return isOnlyCosmeticChanges;
   }
 }

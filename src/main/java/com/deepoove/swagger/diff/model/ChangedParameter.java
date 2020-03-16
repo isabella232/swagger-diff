@@ -29,7 +29,10 @@ public class ChangedParameter extends ChangedExtensionGroup implements Changed {
   }
 
   public boolean isChangeDescription() {
-    return isChangeDescription;
+    if (this.isChangeDescription) {
+      return true;
+    }
+    return leftParameter.getDescription() != null && rightParameter.getDescription() != null && !leftParameter.getDescription().equals(rightParameter.getDescription());
   }
 
   public void setChangeDescription(boolean isChangeDescription) {
@@ -54,11 +57,20 @@ public class ChangedParameter extends ChangedExtensionGroup implements Changed {
 
   public boolean isDiff() {
     return isChangeRequired
-        || isChangeDescription
+        || isChangeDescription()
         || !increased.isEmpty()
         || !missing.isEmpty()
         || !changed.isEmpty()
         || vendorExtensionsAreDiff();
+  }
+
+  public boolean isMeaningfulChanges() {
+    return !isChangeRequired
+        && isChangeDescription()
+        && increased.isEmpty()
+        && missing.isEmpty()
+        && changed.isEmpty()
+        && !vendorExtensionsAreDiff();
   }
 
   public List<ElProperty> getIncreased() {
@@ -85,16 +97,16 @@ public class ChangedParameter extends ChangedExtensionGroup implements Changed {
     this.changed = changed;
   }
 
-  public boolean isOnlyCosmeticChanges() {
-    return this.increased.isEmpty() && this.missing.isEmpty() &&
-        !leftParameter.getDescription().equals(rightParameter.getDescription()) &&
-        leftParameter.getAllowEmptyValue().equals(rightParameter.getAllowEmptyValue()) &&
-        leftParameter.getRequired() == rightParameter.getRequired() &&
-        leftParameter.getAccess().equals(rightParameter.getAccess()) &&
-        leftParameter.getIn().equals(rightParameter.getIn()) &&
-        leftParameter.isReadOnly().equals(rightParameter.isReadOnly()) &&
-        leftParameter.getName().equals(rightParameter.getName()) &&
-        leftParameter.getPattern().equals(rightParameter.getPattern()) &&
-        leftParameter.getVendorExtensions().equals(rightParameter.getVendorExtensions());
-  }
+//  public boolean isOnlyCosmeticChanges() {
+//    return this.increased.isEmpty() && this.missing.isEmpty() &&
+//        !leftParameter.getDescription().equals(rightParameter.getDescription()) &&
+//        leftParameter.getAllowEmptyValue().equals(rightParameter.getAllowEmptyValue()) &&
+//        leftParameter.getRequired() == rightParameter.getRequired() &&
+//        leftParameter.getAccess().equals(rightParameter.getAccess()) &&
+//        leftParameter.getIn().equals(rightParameter.getIn()) &&
+//        leftParameter.isReadOnly().equals(rightParameter.isReadOnly()) &&
+//        leftParameter.getName().equals(rightParameter.getName()) &&
+//        leftParameter.getPattern().equals(rightParameter.getPattern()) &&
+//        leftParameter.getVendorExtensions().equals(rightParameter.getVendorExtensions());
+//  }
 }

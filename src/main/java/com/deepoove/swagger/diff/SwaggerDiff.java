@@ -1,6 +1,5 @@
 package com.deepoove.swagger.diff;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -29,6 +28,8 @@ public class SwaggerDiff {
   private List<ChangedEndpoint> changedEndpoints;
 
   private ChangedExtensionGroup changedVendorExtensions;
+
+  private boolean isOnlyCosmeticChanges;
 
   /**
    * Compare two swagger v2.0 docs by JsonNode
@@ -60,6 +61,7 @@ public class SwaggerDiff {
     this.missingEndpoints = diff.getMissingEndpoints();
     this.changedEndpoints = diff.getChangedEndpoints();
     this.changedVendorExtensions = diff;
+    this.isOnlyCosmeticChanges = diff.isOnlyCosmeticChanges();
     return this;
   }
 

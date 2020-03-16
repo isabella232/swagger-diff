@@ -101,9 +101,12 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
   }
 
   public boolean isOnlyCosmeticChanges() {
-    if (addParameters.isEmpty() && missingParameters.isEmpty() && addProps.isEmpty() && missingProps.isEmpty()) {
+    if (addParameters.isEmpty() && missingParameters.isEmpty() && addProps.isEmpty() && missingProps.isEmpty() && !changedParameters.isEmpty()) {
+//      if (changedParameters.isEmpty()) {
+//        return true;
+//      }
       return changedParameters.stream()
-          .anyMatch(param -> !param.isOnlyCosmeticChanges());
+          .noneMatch(ChangedParameter::isMeaningfulChanges);
     }
     return false;
   }
