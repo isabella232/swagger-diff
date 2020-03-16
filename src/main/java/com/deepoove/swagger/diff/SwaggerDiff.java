@@ -88,4 +88,6 @@ public class SwaggerDiff {
   public String getNewVersion() {
     return newSpecSwagger.getInfo().getVersion();
   }
+
+  public boolean isOnlyCosmeticChanges() { return isOnlyCosmeticChanges; }
 }
