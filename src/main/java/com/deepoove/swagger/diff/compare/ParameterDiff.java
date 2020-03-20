@@ -27,6 +27,8 @@ public class ParameterDiff {
   Map<String, Model> oldDefinitions;
   Map<String, Model> newDefinitions;
 
+  private boolean hasOnlyCosmeticChanges = false;
+
   private ParameterDiff() {
   }
 
@@ -79,9 +81,9 @@ public class ParameterDiff {
             changedParameter.setIncreased(diff.getIncreased());
             changedParameter.setMissing(diff.getMissing());
             changedParameter.setChanged(diff.getChanged());
+            instance.hasOnlyCosmeticChanges = diff.hasOnlyCosmeticChanges();
           }
         }
-
 
         // is required
         boolean rightRequired = rightPara.getRequired();
@@ -142,6 +144,10 @@ public class ParameterDiff {
 
   public void setChanged(List<ChangedParameter> changed) {
     this.changed = changed;
+  }
+
+  public boolean hasOnlyCosmeticChanges() {
+    return hasOnlyCosmeticChanges;
   }
 
 }

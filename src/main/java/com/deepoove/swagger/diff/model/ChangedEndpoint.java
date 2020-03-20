@@ -60,4 +60,3 @@ public class ChangedEndpoint extends ChangedExtensionGroup implements Changed {
     return false;
   }
 }
-}

@@ -3,6 +3,7 @@ package com.deepoove.swagger.diff.compare;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +112,10 @@ public class SpecificationDiff extends ChangedExtensionGroup {
         changedOperation.setMissingParameters(parameterDiff.getMissing());
         changedOperation.setChangedParameters(parameterDiff.getChanged());
 
+        if (!instance.hasContractChanges && parameterDiff.hasOnlyCosmeticChanges()) {
+          instance.hasOnlyCosmeticChanges = true;
+        }
+
         for (ChangedParameter param : parameterDiff.getChanged()) {
           ChangedExtensionGroup paramExtDiff = extDiffer.diff(param.getLeftParameter(), param.getRightParameter());
           param.setVendorExtsFromGroup(paramExtDiff);
@@ -129,6 +134,10 @@ public class SpecificationDiff extends ChangedExtensionGroup {
         changedOperation.setMissingProps(propertyDiff.getMissing());
         changedOperation.setChangedProps(propertyDiff.getChanged());
 
+        changedOperation.setChangeResponseDescription(operationResponseHasCosmeticChanges(oldOperation.getResponses().values(), newOperation.getResponses().values()));
+        changedOperation.setChangeDescription(diffOperationDescription(oldOperation.getDescription(), newOperation.getDescription()));
+        changedOperation.setChangeSummary(diffOperationSummary(oldOperation.getSummary(), newOperation.getSummary()));
+
         ChangedExtensionGroup responseExtDiff = extDiffer.diffResGroup(oldOperation.getResponses(), newOperation.getResponses());
         changedOperation.putSubGroup("responses", responseExtDiff);
         checkContractChanges(instance, responseExtDiff);
@@ -136,7 +145,7 @@ public class SpecificationDiff extends ChangedExtensionGroup {
         if (changedOperation.isDiff()) {
           operas.put(method, changedOperation);
         }
-        if (changedOperation.hasOnlyCosmeticChanges() && !instance.hasContractChanges) {
+        if (!instance.hasContractChanges && changedOperation.hasOnlyCosmeticChanges()) {
           instance.hasOnlyCosmeticChanges = true;
         }
       }
@@ -159,11 +168,35 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     instance.putSubGroup("securityDefinitions", securityExtDiff);
     checkContractChanges(instance, securityExtDiff);
 
-    ChangedExtensionGroup tagExtDiff = extDiffer.diffTagGroup(mapTagsByName(oldSpec.getTags()), mapTagsByName(newSpec.getTags());
+    ChangedExtensionGroup tagExtDiff = extDiffer.diffTagGroup(mapTagsByName(oldSpec.getTags()), mapTagsByName(newSpec.getTags()));
     instance.putSubGroup("tags", tagExtDiff);
     checkContractChanges(instance, tagExtDiff);
 
     return instance;
+  }
+
+  private static boolean diffOperationSummary(String oldSummary, String newSummary) {
+    return ((oldSummary== null) ^ (newSummary== null)) || ((oldSummary != null) && !oldSummary.equals(newSummary));
+  }
+
+  private static boolean diffOperationDescription(String oldDescription, String newDescription) {
+    return ((oldDescription == null) ^ (newDescription == null)) || ((oldDescription != null) && !oldDescription.equals(newDescription));
+  }
+
+  private static boolean operationResponseHasCosmeticChanges(Collection<Response> oldResponses, Collection<Response> newResponses) {
+    Iterator<Response> oldOpResponseIterator = oldResponses.iterator();
+    Iterator<Response> newOpResponseIterator = newResponses.iterator();
+    boolean isChangeDescription = false;
+
+    while (oldOpResponseIterator.hasNext() && newOpResponseIterator.hasNext()) {
+      String oldDescription = oldOpResponseIterator.next().getDescription();
+      String newDescription = newOpResponseIterator.next().getDescription();
+      if (((oldDescription == null) ^ (newDescription == null)) || ((oldDescription != null) && !oldDescription.equals(newDescription))) {
+        isChangeDescription = true;
+      }
+    }
+
+    return isChangeDescription;
   }
 
   private static void checkContractChanges(SpecificationDiff diff, ChangedExtensionGroup extDiff) {

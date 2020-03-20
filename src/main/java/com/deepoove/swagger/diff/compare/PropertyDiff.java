@@ -19,10 +19,13 @@ public class PropertyDiff {
   Map<String, Model> oldDefinitions;
   Map<String, Model> newDefinitions;
 
+  private boolean hasOnlyCosmeticChanges;
+
   private PropertyDiff() {
     increased = new ArrayList<ElProperty>();
     missing = new ArrayList<ElProperty>();
     changed = new ArrayList<ElProperty>();
+    hasOnlyCosmeticChanges = false;
   }
 
   public static PropertyDiff buildWithDefinition(Map<String, Model> left,
@@ -48,6 +51,7 @@ public class PropertyDiff {
       increased.addAll(diff.getIncreased());
       missing.addAll(diff.getMissing());
       changed.addAll(diff.getChanged());
+      this.hasOnlyCosmeticChanges = diff.hasOnlyCosmeticChanges();
     } else if (left != null && right != null && !left.equals(right)) {
       ElProperty elProperty = new ElProperty();
       elProperty.setEl(String.format("%s -> %s", left.getType(), right.getType()));
@@ -55,6 +59,9 @@ public class PropertyDiff {
       elProperty.setProperty(left);
       elProperty.setResponseTypeChanged(true);
       changed.add(elProperty);
+      if (ModelDiff.propertyHasOnlyCosmeticChanges(left, right)) {
+        this.hasOnlyCosmeticChanges = true;
+      }
     }
     return this;
   }
@@ -81,6 +88,10 @@ public class PropertyDiff {
 
   public void setChanged(List<ElProperty> changed) {
     this.changed = changed;
+  }
+
+  public boolean hasOnlyCosmeticChanges() {
+    return hasOnlyCosmeticChanges;
   }
 
 }

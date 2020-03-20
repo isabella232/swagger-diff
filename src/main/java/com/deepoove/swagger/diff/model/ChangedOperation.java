@@ -18,6 +18,10 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
   private List<ElProperty> missingProps = new ArrayList<ElProperty>();
   private List<ElProperty> changedProps = new ArrayList<ElProperty>();
 
+  private boolean isChangeDescription;
+  private boolean isChangeSummary;
+  private boolean isChangeResponseDescription;
+
   public List<Parameter> getAddParameters() {
     return addParameters;
   }
@@ -74,6 +78,18 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
     this.summary = summary;
   }
 
+  public void setChangeDescription(boolean changeDescription) {
+    isChangeDescription = changeDescription;
+  }
+
+  public void setChangeSummary(boolean changeSummary) {
+    isChangeSummary = changeSummary;
+  }
+
+  public void setChangeResponseDescription(boolean changeResponseDescription) {
+    isChangeResponseDescription = changeResponseDescription;
+  }
+
   public boolean isDiff() {
     return !addParameters.isEmpty() || !missingParameters.isEmpty()
         || !changedParameters.isEmpty() || !addProps.isEmpty()
@@ -101,9 +117,13 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
   }
 
   public boolean hasOnlyCosmeticChanges() {
-    if (addParameters.isEmpty() && missingParameters.isEmpty() && addProps.isEmpty() && missingProps.isEmpty() && !changedParameters.isEmpty()) {
-      return changedParameters.stream()
-          .allMatch(ChangedParameter::hasOnlyCosmeticChanges);
+    if (addParameters.isEmpty() && missingParameters.isEmpty() && addProps.isEmpty() && missingProps.isEmpty()) {
+      if (!changedParameters.isEmpty()) {
+        return changedParameters.stream()
+            .allMatch(ChangedParameter::hasOnlyCosmeticChanges);
+      } else {
+        return this.isChangeDescription || this.isChangeResponseDescription || this.isChangeSummary;
+      }
     }
     return false;
   }

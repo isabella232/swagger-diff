@@ -96,17 +96,4 @@ public class ChangedParameter extends ChangedExtensionGroup implements Changed {
   public void setChanged(List<ElProperty> changed) {
     this.changed = changed;
   }
-
-//  public boolean hasOnlyCosmeticChanges() {
-//    return this.increased.isEmpty() && this.missing.isEmpty() &&
-//        !leftParameter.getDescription().equals(rightParameter.getDescription()) &&
-//        leftParameter.getAllowEmptyValue().equals(rightParameter.getAllowEmptyValue()) &&
-//        leftParameter.getRequired() == rightParameter.getRequired() &&
-//        leftParameter.getAccess().equals(rightParameter.getAccess()) &&
-//        leftParameter.getIn().equals(rightParameter.getIn()) &&
-//        leftParameter.isReadOnly().equals(rightParameter.isReadOnly()) &&
-//        leftParameter.getName().equals(rightParameter.getName()) &&
-//        leftParameter.getPattern().equals(rightParameter.getPattern()) &&
-//        leftParameter.getVendorExtensions().equals(rightParameter.getVendorExtensions());
-//  }
 }
