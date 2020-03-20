@@ -16,6 +16,7 @@ import com.deepoove.swagger.diff.model.ChangedParameter;
 import com.deepoove.swagger.diff.model.Endpoint;
 
 import io.swagger.models.HttpMethod;
+import io.swagger.models.Info;
 import io.swagger.models.Operation;
 import io.swagger.models.Path;
 import io.swagger.models.Response;
@@ -63,9 +64,25 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     instance.setVendorExtsFromGroup(specExtDiff);
     checkContractChanges(instance, specExtDiff);
 
-    ChangedExtensionGroup infoExtDiff = extDiffer.diff(oldSpec.getInfo(), newSpec.getInfo());
+    Info oldInfo = oldSpec.getInfo();
+    Info newInfo = newSpec.getInfo();
+    ChangedExtensionGroup infoExtDiff = extDiffer.diff(oldInfo, newInfo);
     instance.putSubGroup("info", infoExtDiff);
     checkContractChanges(instance, infoExtDiff);
+
+    if (!instance.hasContractChanges && infoHasOnlyCosmeticChanges(oldInfo, newInfo)) {
+      instance.hasOnlyCosmeticChanges = true;
+    }
+
+    List<Tag> oldTags = oldSpec.getTags();
+    List<Tag> newTags = newSpec.getTags();
+    ChangedExtensionGroup tagExtDiff = extDiffer.diffTagGroup(mapTagsByName(oldTags), mapTagsByName(newTags));
+    instance.putSubGroup("tags", tagExtDiff);
+    checkContractChanges(instance, tagExtDiff);
+
+    if (!instance.hasContractChanges && tagsHaveOnlyCosmeticChanges(oldTags, newTags)) {
+      instance.hasOnlyCosmeticChanges = true;
+    }
 
     List<String> sharedKey = pathDiff.getSharedKey();
     ChangedEndpoint changedEndpoint = null;
@@ -168,12 +185,33 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     instance.putSubGroup("securityDefinitions", securityExtDiff);
     checkContractChanges(instance, securityExtDiff);
 
-    ChangedExtensionGroup tagExtDiff = extDiffer.diffTagGroup(mapTagsByName(oldSpec.getTags()), mapTagsByName(newSpec.getTags()));
-    instance.putSubGroup("tags", tagExtDiff);
-    checkContractChanges(instance, tagExtDiff);
-
     return instance;
   }
+
+  private static boolean tagsHaveOnlyCosmeticChanges(List<Tag> oldTags, List<Tag> newTags) {
+    Iterator<Tag> oldTagIterator = oldTags.iterator();
+    Iterator<Tag> newTagIterator = newTags.iterator();
+    boolean onlyCosmeticChanges = true;
+    while (oldTagIterator.hasNext() && newTagIterator.hasNext()) {
+      Tag oldTag = oldTagIterator.next();
+      Tag newTag = newTagIterator.next();
+      onlyCosmeticChanges &= ((oldTag.getDescription() == null ^ newTag.getDescription() == null) || !oldTag.getDescription().equals(newTag.getDescription())) &&
+          (oldTag.getName() == null && newTag.getName() == null || oldTag.getName().equals(newTag.getName())) &&
+          (oldTag.getExternalDocs() == null && newTag.getExternalDocs() == null || oldTag.getExternalDocs().equals(newTag.getExternalDocs()));
+    }
+
+    return onlyCosmeticChanges;
+  }
+
+  private static boolean infoHasOnlyCosmeticChanges(Info oldInfo, Info newInfo) {
+    return ((oldInfo.getDescription() == null ^ newInfo.getDescription() == null) || !oldInfo.getDescription().equals(newInfo.getDescription())) &&
+        (oldInfo.getVersion() == null && newInfo.getVersion() == null || oldInfo.getVersion().equals(newInfo.getVersion())) &&
+        (oldInfo.getTitle() == null && newInfo.getTitle() == null || oldInfo.getTitle().equals(newInfo.getTitle())) &&
+        (oldInfo.getContact() == null && newInfo.getContact() == null || oldInfo.getContact().equals(newInfo.getContact())) &&
+        (oldInfo.getLicense() == null && newInfo.getLicense() == null || oldInfo.getLicense().equals(newInfo.getLicense())) &&
+        (oldInfo.getTermsOfService() == null && newInfo.getTermsOfService() == null || oldInfo.getTermsOfService().equals(newInfo.getTermsOfService()));
+  }
+
 
   private static boolean diffOperationSummary(String oldSummary, String newSummary) {
     return ((oldSummary== null) ^ (newSummary== null)) || ((oldSummary != null) && !oldSummary.equals(newSummary));
