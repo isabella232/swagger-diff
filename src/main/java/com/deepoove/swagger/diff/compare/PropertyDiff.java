@@ -16,27 +16,21 @@ public class PropertyDiff {
   private List<ElProperty> missing;
   private List<ElProperty> changed;
 
-  Map<String, Model> oldDefinitions;
-  Map<String, Model> newDefinitions;
+  private Map<String, Model> oldDefinitions;
+  private Map<String, Model> newDefinitions;
 
   private boolean hasOnlyCosmeticChanges;
 
-  private PropertyDiff() {
+  public PropertyDiff(Map<String, Model> left, Map<String, Model> right) {
+    this.oldDefinitions = left;
+    this.newDefinitions = right;
     increased = new ArrayList<ElProperty>();
     missing = new ArrayList<ElProperty>();
     changed = new ArrayList<ElProperty>();
     hasOnlyCosmeticChanges = false;
   }
 
-  public static PropertyDiff buildWithDefinition(Map<String, Model> left,
-                                                 Map<String, Model> right) {
-    PropertyDiff diff = new PropertyDiff();
-    diff.oldDefinitions = left;
-    diff.newDefinitions = right;
-    return diff;
-  }
-
-  public PropertyDiff diff(Property left, Property right) {
+  public void diff(Property left, Property right) {
     if ((null == left || left instanceof RefProperty) && (null == right || right instanceof RefProperty)) {
       Model leftModel = null == left ? null : oldDefinitions.get(((RefProperty) left).getSimpleRef());
       Model rightModel = null == right ? null : newDefinitions.get(((RefProperty) right).getSimpleRef());
@@ -45,13 +39,12 @@ public class PropertyDiff {
           : right != null
           ? ((RefProperty) right).getSimpleRef()
           : null;
-      ModelDiff diff = ModelDiff
-          .buildWithDefinition(oldDefinitions, newDefinitions)
-          .diff(leftModel, rightModel, ref);
-      increased.addAll(diff.getIncreased());
-      missing.addAll(diff.getMissing());
-      changed.addAll(diff.getChanged());
-      this.hasOnlyCosmeticChanges = diff.hasOnlyCosmeticChanges();
+      ModelDiff modelDiff = new ModelDiff(oldDefinitions, newDefinitions);
+      modelDiff.diff(leftModel, rightModel, ref);
+      increased.addAll(modelDiff.getIncreased());
+      missing.addAll(modelDiff.getMissing());
+      changed.addAll(modelDiff.getChanged());
+      this.hasOnlyCosmeticChanges = modelDiff.hasOnlyCosmeticChanges();
     } else if (left != null && right != null && !left.equals(right)) {
       ElProperty elProperty = new ElProperty();
       elProperty.setEl(String.format("%s -> %s", left.getType(), right.getType()));
@@ -63,7 +56,6 @@ public class PropertyDiff {
         this.hasOnlyCosmeticChanges = true;
       }
     }
-    return this;
   }
 
   public List<ElProperty> getIncreased() {

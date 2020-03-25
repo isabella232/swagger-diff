@@ -26,13 +26,15 @@ public class ModelDiff {
   private List<ElProperty> missing;
   private List<ElProperty> changed;
 
-  Map<String, Model> oldDefinitions;
-  Map<String, Model> newDefinitions;
+  private Map<String, Model> oldDefinitions;
+  private Map<String, Model> newDefinitions;
 
   private boolean hasOnlyCosmeticChanges;
   private boolean hasACosmeticChange;
 
-  private ModelDiff() {
+  public ModelDiff(Map<String, Model> left, Map<String, Model> right) {
+    this.oldDefinitions = left;
+    this.newDefinitions = right;
     increased = new ArrayList<ElProperty>();
     missing = new ArrayList<ElProperty>();
     changed = new ArrayList<ElProperty>();
@@ -40,27 +42,19 @@ public class ModelDiff {
     hasACosmeticChange = false;
   }
 
-  public static ModelDiff buildWithDefinition(Map<String, Model> left,
-                                              Map<String, Model> right) {
-    ModelDiff diff = new ModelDiff();
-    diff.oldDefinitions = left;
-    diff.newDefinitions = right;
-    return diff;
+  public void diff(Model leftModel, Model rightModel) {
+    this.diff(leftModel, rightModel, null, null, new HashSet<Model>());
   }
 
-  public ModelDiff diff(Model leftModel, Model rightModel) {
-    return this.diff(leftModel, rightModel, null, null, new HashSet<Model>());
+  public void diff(Model leftModel, Model rightModel, String parentModel) {
+    this.diff(leftModel, rightModel, null, parentModel, new HashSet<Model>());
   }
 
-  public ModelDiff diff(Model leftModel, Model rightModel, String parentModel) {
-    return this.diff(leftModel, rightModel, null, parentModel, new HashSet<Model>());
-  }
-
-  private ModelDiff diff(Model leftModel, Model rightModel, String parentEl, String parentModel, Set<Model> visited) {
+  private void diff(Model leftModel, Model rightModel, String parentEl, String parentModel, Set<Model> visited) {
     // Stop recursing if both models are null
     // OR either model is already contained in the visiting history
     if ((null == leftModel && null == rightModel) || visited.contains(leftModel) || visited.contains(rightModel)) {
-      return this;
+      return;
     }
     Map<String, Property> leftProperties = null == leftModel ? null : leftModel.getProperties();
     Map<String, Property> rightProperties = null == rightModel ? null : rightModel.getProperties();
@@ -101,7 +95,6 @@ public class ModelDiff {
         changed.add(convert2ElProperty(key, parentEl, parentModel, left));
       }
     }
-    return this;
   }
 
   private Collection<? extends ElProperty> convert2ElPropertys(

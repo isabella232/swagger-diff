@@ -2,7 +2,6 @@ package com.deepoove.swagger.diff.compare;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,19 +10,14 @@ import java.util.Map.Entry;
 
 import com.deepoove.swagger.diff.model.ChangedEndpoint;
 import com.deepoove.swagger.diff.model.ChangedExtensionGroup;
-import com.deepoove.swagger.diff.model.ChangedOperation;
-import com.deepoove.swagger.diff.model.ChangedParameter;
 import com.deepoove.swagger.diff.model.Endpoint;
 
 import io.swagger.models.HttpMethod;
 import io.swagger.models.Info;
 import io.swagger.models.Operation;
 import io.swagger.models.Path;
-import io.swagger.models.Response;
 import io.swagger.models.Swagger;
 import io.swagger.models.Tag;
-import io.swagger.models.parameters.Parameter;
-import io.swagger.models.properties.Property;
 
 /**
  * compare two Swagger
@@ -39,6 +33,9 @@ public class SpecificationDiff extends ChangedExtensionGroup {
   private boolean hasOnlyCosmeticChanges;
 
   private SpecificationDiff() {
+    newEndpoints = new ArrayList<>();
+    missingEndpoints = new ArrayList<>();
+    changedEndpoints = new ArrayList<>();
     hasContractChanges = false;
     hasOnlyCosmeticChanges = false;
   }
@@ -58,17 +55,16 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     MapKeyDiff<String, Path> pathDiff = MapKeyDiff.diff(oldPaths, newPaths);
     instance.newEndpoints = convert2EndpointList(pathDiff.getIncreased());
     instance.missingEndpoints = convert2EndpointList(pathDiff.getMissing());
-    instance.changedEndpoints = new ArrayList<ChangedEndpoint>();
 
     ChangedExtensionGroup specExtDiff = extDiffer.diff(oldSpec, newSpec);
     instance.setVendorExtsFromGroup(specExtDiff);
-    checkContractChanges(instance, specExtDiff);
+    checkVendorExtsDiff(instance, specExtDiff);
 
     Info oldInfo = oldSpec.getInfo();
     Info newInfo = newSpec.getInfo();
     ChangedExtensionGroup infoExtDiff = extDiffer.diff(oldInfo, newInfo);
     instance.putSubGroup("info", infoExtDiff);
-    checkContractChanges(instance, infoExtDiff);
+    checkVendorExtsDiff(instance, infoExtDiff);
 
     if (!instance.hasContractChanges && infoHasOnlyCosmeticChanges(oldInfo, newInfo)) {
       instance.hasOnlyCosmeticChanges = true;
@@ -78,7 +74,7 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     List<Tag> newTags = newSpec.getTags();
     ChangedExtensionGroup tagExtDiff = extDiffer.diffTagGroup(mapTagsByName(oldTags), mapTagsByName(newTags));
     instance.putSubGroup("tags", tagExtDiff);
-    checkContractChanges(instance, tagExtDiff);
+    checkVendorExtsDiff(instance, tagExtDiff);
 
     if (!instance.hasContractChanges && tagsHaveOnlyCosmeticChanges(oldTags, newTags)) {
       instance.hasOnlyCosmeticChanges = true;
@@ -94,79 +90,21 @@ public class SpecificationDiff extends ChangedExtensionGroup {
 
       ChangedExtensionGroup pathExtDiff = extDiffer.diff(oldPath, newPath);
       changedEndpoint.setVendorExtsFromGroup(pathExtDiff);
-      checkContractChanges(instance, pathExtDiff);
+      checkVendorExtsDiff(instance, pathExtDiff);
 
-      Map<HttpMethod, Operation> oldOperationMap = oldPath.getOperationMap();
-      Map<HttpMethod, Operation> newOperationMap = newPath.getOperationMap();
-      MapKeyDiff<HttpMethod, Operation> operationDiff = MapKeyDiff.diff(oldOperationMap, newOperationMap);
-      Map<HttpMethod, Operation> increasedOperation = operationDiff.getIncreased();
-      Map<HttpMethod, Operation> missingOperation = operationDiff.getMissing();
-      changedEndpoint.setNewOperations(increasedOperation);
-      changedEndpoint.setMissingOperations(missingOperation);
-      if (!increasedOperation.isEmpty() || !missingOperation.isEmpty()) {
-        instance.hasContractChanges = true;
-        instance.hasOnlyCosmeticChanges = false;
+      // TODO: Operation diff
+      OperationDiff operationDiff = new OperationDiff(oldPath.getOperationMap(), newPath.getOperationMap(), oldSpec.getDefinitions(), newSpec.getDefinitions(), extDiffer);
+      operationDiff.diff();
+      changedEndpoint.setNewOperations(operationDiff.getIncreasedOperation());
+      changedEndpoint.setMissingOperations(operationDiff.getMissingOperation());
+      changedEndpoint.setChangedOperations(operationDiff.getChangedOperations());
+      if (operationDiff.hasOnlyCosmeticChanges() && !instance.hasContractChanges) {
+        instance.hasOnlyCosmeticChanges = true;
       }
 
-      List<HttpMethod> sharedMethods = operationDiff.getSharedKey();
-      Map<HttpMethod, ChangedOperation> operas = new HashMap<HttpMethod, ChangedOperation>();
-      ChangedOperation changedOperation = null;
-
-      for (HttpMethod method : sharedMethods) {
-        changedOperation = new ChangedOperation();
-        Operation oldOperation = oldOperationMap.get(method);
-        Operation newOperation = newOperationMap.get(method);
-        changedOperation.setSummary(newOperation.getSummary());
-
-        changedOperation.setVendorExtsFromGroup(extDiffer.diff(oldOperation, newOperation));
-
-        List<Parameter> oldParameters = oldOperation.getParameters();
-        List<Parameter> newParameters = newOperation.getParameters();
-        ParameterDiff parameterDiff = ParameterDiff
-            .buildWithDefinition(oldSpec.getDefinitions(), newSpec.getDefinitions())
-            .diff(oldParameters, newParameters);
-        changedOperation.setAddParameters(parameterDiff.getIncreased());
-        changedOperation.setMissingParameters(parameterDiff.getMissing());
-        changedOperation.setChangedParameters(parameterDiff.getChanged());
-
-        if (!instance.hasContractChanges && parameterDiff.hasOnlyCosmeticChanges()) {
-          instance.hasOnlyCosmeticChanges = true;
-        }
-
-        for (ChangedParameter param : parameterDiff.getChanged()) {
-          ChangedExtensionGroup paramExtDiff = extDiffer.diff(param.getLeftParameter(), param.getRightParameter());
-          param.setVendorExtsFromGroup(paramExtDiff);
-          if (paramExtDiff.vendorExtensionsAreDiff()) {
-            instance.hasContractChanges = true;
-            instance.hasOnlyCosmeticChanges = false;
-          }
-        }
-
-        Property oldResponseProperty = getResponseProperty(oldOperation);
-        Property newResponseProperty = getResponseProperty(newOperation);
-        PropertyDiff propertyDiff = PropertyDiff.buildWithDefinition(oldSpec.getDefinitions(),
-            newSpec.getDefinitions());
-        propertyDiff.diff(oldResponseProperty, newResponseProperty);
-        changedOperation.setAddProps(propertyDiff.getIncreased());
-        changedOperation.setMissingProps(propertyDiff.getMissing());
-        changedOperation.setChangedProps(propertyDiff.getChanged());
-
-        changedOperation.setChangeResponseDescription(operationResponseHasCosmeticChanges(oldOperation.getResponses().values(), newOperation.getResponses().values()));
-        changedOperation.setChangeDescription(diffOperationDescription(oldOperation.getDescription(), newOperation.getDescription()));
-        changedOperation.setChangeSummary(diffOperationSummary(oldOperation.getSummary(), newOperation.getSummary()));
-
-        ChangedExtensionGroup responseExtDiff = extDiffer.diffResGroup(oldOperation.getResponses(), newOperation.getResponses());
-        changedOperation.putSubGroup("responses", responseExtDiff);
-        checkContractChanges(instance, responseExtDiff);
-
-        if (changedOperation.isDiff()) {
-          operas.put(method, changedOperation);
-        }
-        if (!instance.hasContractChanges && changedOperation.hasOnlyCosmeticChanges()) {
-          instance.hasOnlyCosmeticChanges = true;
-        }
-      }
-      changedEndpoint.setChangedOperations(operas);
+      changedEndpoint.setNewOperations(operationDiff.getIncreasedOperation());
+      changedEndpoint.setMissingOperations(operationDiff.getMissingOperation());
+      changedEndpoint.setChangedOperations(operationDiff.getChangedOperations());
 
       instance.newEndpoints
           .addAll(convert2EndpointList(changedEndpoint.getPathUrl(), changedEndpoint.getNewOperations()));
@@ -183,7 +121,7 @@ public class SpecificationDiff extends ChangedExtensionGroup {
 
     ChangedExtensionGroup securityExtDiff = extDiffer.diffSecGroup(oldSpec.getSecurityDefinitions(), newSpec.getSecurityDefinitions());
     instance.putSubGroup("securityDefinitions", securityExtDiff);
-    checkContractChanges(instance, securityExtDiff);
+    checkVendorExtsDiff(instance, securityExtDiff);
 
     return instance;
   }
@@ -212,32 +150,7 @@ public class SpecificationDiff extends ChangedExtensionGroup {
         (oldInfo.getTermsOfService() == null && newInfo.getTermsOfService() == null || oldInfo.getTermsOfService().equals(newInfo.getTermsOfService()));
   }
 
-
-  private static boolean diffOperationSummary(String oldSummary, String newSummary) {
-    return ((oldSummary== null) ^ (newSummary== null)) || ((oldSummary != null) && !oldSummary.equals(newSummary));
-  }
-
-  private static boolean diffOperationDescription(String oldDescription, String newDescription) {
-    return ((oldDescription == null) ^ (newDescription == null)) || ((oldDescription != null) && !oldDescription.equals(newDescription));
-  }
-
-  private static boolean operationResponseHasCosmeticChanges(Collection<Response> oldResponses, Collection<Response> newResponses) {
-    Iterator<Response> oldOpResponseIterator = oldResponses.iterator();
-    Iterator<Response> newOpResponseIterator = newResponses.iterator();
-    boolean isChangeDescription = false;
-
-    while (oldOpResponseIterator.hasNext() && newOpResponseIterator.hasNext()) {
-      String oldDescription = oldOpResponseIterator.next().getDescription();
-      String newDescription = newOpResponseIterator.next().getDescription();
-      if (((oldDescription == null) ^ (newDescription == null)) || ((oldDescription != null) && !oldDescription.equals(newDescription))) {
-        isChangeDescription = true;
-      }
-    }
-
-    return isChangeDescription;
-  }
-
-  private static void checkContractChanges(SpecificationDiff diff, ChangedExtensionGroup extDiff) {
+  public static void checkVendorExtsDiff(SpecificationDiff diff, ChangedExtensionGroup extDiff) {
     if (extDiff.vendorExtensionsAreDiff()) {
       diff.hasContractChanges = true;
       diff.hasOnlyCosmeticChanges = false;
@@ -253,16 +166,6 @@ public class SpecificationDiff extends ChangedExtensionGroup {
       mappedTags.put(tag.getName(), tag);
     }
     return mappedTags;
-  }
-
-  private static Property getResponseProperty(Operation operation) {
-    Map<String, Response> responses = operation.getResponses();
-    // temporary workaround for missing response messages
-    if (responses == null) {
-      return null;
-    }
-    Response response = responses.get("200");
-    return null == response ? null : response.getSchema();
   }
 
   private static List<Endpoint> convert2EndpointList(Map<String, Path> map) {

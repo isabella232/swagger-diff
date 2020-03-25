@@ -24,25 +24,19 @@ public class ParameterDiff {
   private List<Parameter> missing;
   private List<ChangedParameter> changed;
 
-  Map<String, Model> oldDefinitions;
-  Map<String, Model> newDefinitions;
+  private Map<String, Model> oldDefinitions;
+  private Map<String, Model> newDefinitions;
 
-  private boolean hasOnlyCosmeticChanges = false;
+  private boolean hasOnlyCosmeticChanges;
 
-  private ParameterDiff() {
+  public ParameterDiff(Map<String, Model> left, Map<String, Model> right) {
+    this.oldDefinitions = left;
+    this.newDefinitions = right;
+    this.hasOnlyCosmeticChanges = false;
   }
 
-  public static ParameterDiff buildWithDefinition(Map<String, Model> left,
-                                                  Map<String, Model> right) {
-    ParameterDiff diff = new ParameterDiff();
-    diff.oldDefinitions = left;
-    diff.newDefinitions = right;
-    return diff;
-  }
-
-  public ParameterDiff diff(List<Parameter> left,
-                            List<Parameter> right) {
-    ParameterDiff instance = new ParameterDiff();
+  public void diff(List<Parameter> left,
+                   List<Parameter> right) {
     if (null == left) {
       left = new ArrayList<>();
     }
@@ -50,17 +44,17 @@ public class ParameterDiff {
       right = new ArrayList<>();
     }
 
-    instance.increased = new ArrayList<>(right);
-    instance.missing = new ArrayList<>();
-    instance.changed = new ArrayList<>();
+    this.increased = new ArrayList<>(right);
+    this.missing = new ArrayList<>();
+    this.changed = new ArrayList<>();
     for (Parameter leftPara : left) {
       String name = leftPara.getName();
-      int index = index(instance.increased, name);
+      int index = index(this.increased, name);
       if (-1 == index) {
-        instance.missing.add(leftPara);
+        this.missing.add(leftPara);
       } else {
-        Parameter rightPara = instance.increased.get(index);
-        instance.increased.remove(index);
+        Parameter rightPara = this.increased.get(index);
+        this.increased.remove(index);
 
         ChangedParameter changedParameter = new ChangedParameter();
         changedParameter.setLeftParameter(leftPara);
@@ -77,11 +71,12 @@ public class ParameterDiff {
             Model leftModel = oldDefinitions.get(leftRef);
             Model rightModel = newDefinitions.get(rightRef);
             String aRef = leftRef != null ? leftRef : rightRef;
-            ModelDiff diff = ModelDiff.buildWithDefinition(oldDefinitions, newDefinitions).diff(leftModel, rightModel, aRef);
-            changedParameter.setIncreased(diff.getIncreased());
-            changedParameter.setMissing(diff.getMissing());
-            changedParameter.setChanged(diff.getChanged());
-            instance.hasOnlyCosmeticChanges = diff.hasOnlyCosmeticChanges();
+            ModelDiff modelDiff = new ModelDiff(oldDefinitions, newDefinitions);
+            modelDiff.diff(leftModel, rightModel, aRef);
+            changedParameter.setIncreased(modelDiff.getIncreased());
+            changedParameter.setMissing(modelDiff.getMissing());
+            changedParameter.setChanged(modelDiff.getChanged());
+            this.hasOnlyCosmeticChanges = modelDiff.hasOnlyCosmeticChanges();
           }
         }
 
@@ -91,29 +86,25 @@ public class ParameterDiff {
         changedParameter.setChangeRequired(leftRequired != rightRequired);
 
         // description
-        String description = rightPara.getDescription();
-        String oldPescription = leftPara.getDescription();
-        if (StringUtils.isBlank(description)) {
-          description = "";
+        String newDescription = rightPara.getDescription();
+        String oldDescription = leftPara.getDescription();
+        if (StringUtils.isBlank(newDescription)) {
+          newDescription = "";
         }
-        if (StringUtils.isBlank(oldPescription)) {
-          oldPescription = "";
+        if (StringUtils.isBlank(oldDescription)) {
+          oldDescription = "";
         }
-        changedParameter.setChangeDescription(!description.equals(oldPescription));
+        changedParameter.setChangeDescription(!newDescription.equals(oldDescription));
 
         if (changedParameter.isDiff()) {
-          instance.changed.add(changedParameter);
+          this.changed.add(changedParameter);
         }
-
       }
-
     }
-    return instance;
   }
 
   private static int index(List<Parameter> right, String name) {
-    int i = 0;
-    for (; i < right.size(); i++) {
+    for (int i = 0; i < right.size(); i++) {
       Parameter para = right.get(i);
       if (name.equals(para.getName())) {
         return i;
