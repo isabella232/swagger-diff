@@ -16,7 +16,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
+import io.swagger.models.Contact;
 import io.swagger.models.HttpMethod;
+import io.swagger.models.License;
+import io.swagger.models.Swagger;
+import io.swagger.parser.SwaggerParser;
 
 public class SwaggerDiffTest {
 
@@ -86,8 +90,24 @@ public class SwaggerDiffTest {
 
   @Test
   public void cosmeticChanges() throws IOException {
-    SwaggerDiff diff = SwaggerDiff.compareV2(loadSpec(SWAGGER_V2_DOC1), loadSpec(SWAGGER_V2_DOC1_COSMETIC), true);
-    Assert.assertTrue(diff.hasOnlyCosmeticChanges());
+    SwaggerParser swaggerParser = new SwaggerParser();
+    Swagger left = swaggerParser.read(loadSpec(SWAGGER_V2_DOC1), true);
+    Swagger right = swaggerParser.read(loadSpec(SWAGGER_V2_DOC1), true);
+
+    right.getInfo().setDescription("DIFF");
+    Assert.assertTrue(SwaggerDiff.compareV2(left, right).hasOnlyCosmeticChanges());
+    right.getInfo().setVersion("DIFF");
+    Assert.assertTrue(SwaggerDiff.compareV2(left, right).hasOnlyCosmeticChanges());
+    right.getInfo().setTermsOfService("DIFF");
+    Assert.assertTrue(SwaggerDiff.compareV2(left, right).hasOnlyCosmeticChanges());
+    right.getInfo().setTitle("DIFF");
+    Assert.assertTrue(SwaggerDiff.compareV2(left, right).hasOnlyCosmeticChanges());
+    right.getInfo().setContact(new Contact());
+    Assert.assertTrue(SwaggerDiff.compareV2(left, right).hasOnlyCosmeticChanges());
+    right.getInfo().setLicense(new License());
+    Assert.assertTrue(SwaggerDiff.compareV2(left, right).hasOnlyCosmeticChanges());
+    right.getInfo().setVendorExtension("x-diff", null);
+    Assert.assertFalse(SwaggerDiff.compareV2(left, right, true).hasOnlyCosmeticChanges());
   }
 
   private void assertEqual(SwaggerDiff diff) {

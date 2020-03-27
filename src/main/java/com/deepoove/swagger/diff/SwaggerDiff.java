@@ -45,11 +45,28 @@ public class SwaggerDiff {
     return new SwaggerDiff(oldSpec, newSpec).compare(withExtensions);
   }
 
+  public static SwaggerDiff compareV2(Swagger oldSpecSwagger, Swagger newSpecSwagger) {
+    return compareV2(oldSpecSwagger, newSpecSwagger, false);
+  }
+
+  public static SwaggerDiff compareV2(Swagger oldSpecSwagger, Swagger newSpecSwagger, boolean withExtensions) {
+    return new SwaggerDiff(oldSpecSwagger, newSpecSwagger).compare(withExtensions);
+  }
+
+  private SwaggerDiff(Swagger oldSpecSwagger, Swagger newSpecSwagger) {
+    this.oldSpecSwagger = oldSpecSwagger;
+    this.newSpecSwagger = newSpecSwagger;
+    if (null == oldSpecSwagger || null == newSpecSwagger) {
+      throw new RuntimeException(
+          "cannot read api-doc from spec.");
+    }
+  }
+
   private SwaggerDiff(JsonNode oldSpec, JsonNode newSpec) {
     SwaggerParser swaggerParser = new SwaggerParser();
-    oldSpecSwagger = swaggerParser.read(oldSpec, true);
-    newSpecSwagger = swaggerParser.read(newSpec, true);
-    if (null == oldSpecSwagger || null == newSpecSwagger) {
+    this.oldSpecSwagger = swaggerParser.read(oldSpec, true);
+    this.newSpecSwagger = swaggerParser.read(newSpec, true);
+    if (null == this.oldSpecSwagger || null == this.newSpecSwagger) {
       throw new RuntimeException(
           "cannot read api-doc from spec.");
     }
@@ -89,5 +106,7 @@ public class SwaggerDiff {
     return newSpecSwagger.getInfo().getVersion();
   }
 
-  public boolean hasOnlyCosmeticChanges() { return hasOnlyCosmeticChanges; }
+  public boolean hasOnlyCosmeticChanges() {
+    return hasOnlyCosmeticChanges;
+  }
 }

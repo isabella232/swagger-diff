@@ -66,7 +66,7 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     instance.putSubGroup("info", infoExtDiff);
     checkVendorExtsDiff(instance, infoExtDiff);
 
-    if (!instance.hasContractChanges && infoHasOnlyCosmeticChanges(oldInfo, newInfo)) {
+    if (!instance.hasContractChanges && infoHasChanges(oldInfo, newInfo)) {
       instance.hasOnlyCosmeticChanges = true;
     }
 
@@ -76,7 +76,7 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     instance.putSubGroup("tags", tagExtDiff);
     checkVendorExtsDiff(instance, tagExtDiff);
 
-    if (!instance.hasContractChanges && tagsHaveOnlyCosmeticChanges(oldTags, newTags)) {
+    if (!instance.hasContractChanges && tagsHaveChanges(oldTags, newTags)) {
       instance.hasOnlyCosmeticChanges = true;
     }
 
@@ -126,28 +126,29 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     return instance;
   }
 
-  private static boolean tagsHaveOnlyCosmeticChanges(List<Tag> oldTags, List<Tag> newTags) {
+  private static boolean tagsHaveChanges(List<Tag> oldTags, List<Tag> newTags) {
     Iterator<Tag> oldTagIterator = oldTags.iterator();
     Iterator<Tag> newTagIterator = newTags.iterator();
-    boolean onlyCosmeticChanges = true;
+    boolean hasChanges = false;
+
     while (oldTagIterator.hasNext() && newTagIterator.hasNext()) {
       Tag oldTag = oldTagIterator.next();
       Tag newTag = newTagIterator.next();
-      onlyCosmeticChanges &= ((oldTag.getDescription() == null ^ newTag.getDescription() == null) || !oldTag.getDescription().equals(newTag.getDescription())) &&
+      hasChanges |= !((oldTag.getDescription() == null && newTag.getDescription() == null || oldTag.getDescription().equals(newTag.getDescription())) &&
           (oldTag.getName() == null && newTag.getName() == null || oldTag.getName().equals(newTag.getName())) &&
-          (oldTag.getExternalDocs() == null && newTag.getExternalDocs() == null || oldTag.getExternalDocs().equals(newTag.getExternalDocs()));
+          (oldTag.getExternalDocs() == null && newTag.getExternalDocs() == null || oldTag.getExternalDocs().equals(newTag.getExternalDocs())));
     }
 
-    return onlyCosmeticChanges;
+    return hasChanges;
   }
 
-  private static boolean infoHasOnlyCosmeticChanges(Info oldInfo, Info newInfo) {
-    return ((oldInfo.getDescription() == null ^ newInfo.getDescription() == null) || !oldInfo.getDescription().equals(newInfo.getDescription())) &&
+  private static boolean infoHasChanges(Info oldInfo, Info newInfo) {
+    return !((oldInfo.getDescription() == null && newInfo.getDescription() == null || oldInfo.getDescription().equals(newInfo.getDescription())) &&
         (oldInfo.getVersion() == null && newInfo.getVersion() == null || oldInfo.getVersion().equals(newInfo.getVersion())) &&
         (oldInfo.getTitle() == null && newInfo.getTitle() == null || oldInfo.getTitle().equals(newInfo.getTitle())) &&
         (oldInfo.getContact() == null && newInfo.getContact() == null || oldInfo.getContact().equals(newInfo.getContact())) &&
         (oldInfo.getLicense() == null && newInfo.getLicense() == null || oldInfo.getLicense().equals(newInfo.getLicense())) &&
-        (oldInfo.getTermsOfService() == null && newInfo.getTermsOfService() == null || oldInfo.getTermsOfService().equals(newInfo.getTermsOfService()));
+        (oldInfo.getTermsOfService() == null && newInfo.getTermsOfService() == null || oldInfo.getTermsOfService().equals(newInfo.getTermsOfService())));
   }
 
   public static void checkVendorExtsDiff(SpecificationDiff diff, ChangedExtensionGroup extDiff) {
