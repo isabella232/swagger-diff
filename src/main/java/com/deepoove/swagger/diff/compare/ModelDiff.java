@@ -81,7 +81,7 @@ public class ModelDiff {
 
       } else if (left != null && right != null && !left.equals(right)) {
         if (increased.isEmpty() && missing.isEmpty() && hasOnlyCosmeticChanges == hasACosmeticChange) {
-          if (propertyHasOnlyCosmeticChanges(left, right)) {
+          if (PropertyDiff.hasOnlyCosmeticChanges(left, right)) {
             if (!hasACosmeticChange) {
               hasACosmeticChange = true;
               hasOnlyCosmeticChanges = true;
@@ -155,20 +155,5 @@ public class ModelDiff {
 
   public boolean hasOnlyCosmeticChanges() {
     return hasOnlyCosmeticChanges;
-  }
-
-  public static boolean propertyHasOnlyCosmeticChanges(Property left, Property right) {
-    return ((left.getDescription() == null ^ right.getDescription() == null) || left.getDescription() != null && !left.getDescription().equals(right.getDescription()) ||
-        ((left.getExample() == null ^ right.getExample() == null) || left.getExample() != null && !left.getExample().equals(right.getExample()))) &&
-        (left.getAllowEmptyValue() == null && right.getAllowEmptyValue() == null || left.getAllowEmptyValue().equals(right.getAllowEmptyValue())) &&
-        left.getRequired() == right.getRequired() &&
-        (left.getAccess() == null && right.getAccess() == null || left.getAccess().equals(right.getAccess())) &&
-        (left.getTitle() == null && right.getTitle() == null || left.getTitle().equals(right.getTitle())) &&
-        (left.getReadOnly() == null && right.getReadOnly() == null || left.getReadOnly().equals(right.getReadOnly())) &&
-        (left.getName() == null && right.getName() == null || left.getName().equals(right.getName())) &&
-        (left.getType() == null && right.getType() == null || left.getType().equals(right.getType())) &&
-        (left.getFormat() == null && right.getFormat() == null || left.getFormat().equals(right.getFormat())) &&
-        (left.getVendorExtensions() == null && right.getVendorExtensions() == null || left.getVendorExtensions().equals(right.getVendorExtensions())) &&
-        (left.getPosition() == null && right.getPosition() == null || left.getPosition().equals(right.getPosition()));
   }
 }

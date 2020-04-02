@@ -2,12 +2,13 @@ package com.deepoove.swagger.diff.compare;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.deepoove.swagger.diff.SwaggerDiff;
 import com.deepoove.swagger.diff.model.ChangedEndpoint;
 import com.deepoove.swagger.diff.model.ChangedExtensionGroup;
 import com.deepoove.swagger.diff.model.Endpoint;
@@ -24,28 +25,27 @@ import io.swagger.models.Tag;
  *
  * @author Sayi
  */
-public class SpecificationDiff extends ChangedExtensionGroup {
+public class SpecificationDiff {
+  private Swagger oldSpec;
+  private Swagger newSpec;
+  private boolean withExtensions;
 
-  private List<Endpoint> newEndpoints;
-  private List<Endpoint> missingEndpoints;
-  private List<ChangedEndpoint> changedEndpoints;
-  private boolean hasContractChanges;
-  private boolean hasOnlyCosmeticChanges;
-
-  private SpecificationDiff() {
-    newEndpoints = new ArrayList<>();
-    missingEndpoints = new ArrayList<>();
-    changedEndpoints = new ArrayList<>();
-    hasContractChanges = false;
-    hasOnlyCosmeticChanges = false;
+  private SpecificationDiff(Swagger oldSpec, Swagger newSpec, boolean withExtensions) {
+    this.oldSpec = oldSpec;
+    this.newSpec = newSpec;
+    this.withExtensions = withExtensions;
   }
 
-  public static SpecificationDiff diff(Swagger oldSpec, Swagger newSpec) {
-    return diff(oldSpec, newSpec, false);
+  public static SpecificationDiff build(Swagger oldSpec, Swagger newSpec) {
+    return SpecificationDiff.build(oldSpec, newSpec, false);
   }
 
-  public static SpecificationDiff diff(Swagger oldSpec, Swagger newSpec, boolean withExtensions) {
-    SpecificationDiff instance = new SpecificationDiff();
+  public static SpecificationDiff build(Swagger oldSpec, Swagger newSpec, boolean withExtensions) {
+    return new SpecificationDiff(oldSpec, newSpec, withExtensions);
+  }
+
+  public SpecificationDiffResult diff() {
+    SpecificationDiffResult specificationDiffResult = new SpecificationDiffResult();
     VendorExtensionDiff extDiffer = new VendorExtensionDiff(withExtensions);
     if (null == oldSpec || null == newSpec) {
       throw new IllegalArgumentException("cannot diff null spec.");
@@ -53,35 +53,30 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     Map<String, Path> oldPaths = oldSpec.getPaths();
     Map<String, Path> newPaths = newSpec.getPaths();
     MapKeyDiff<String, Path> pathDiff = MapKeyDiff.diff(oldPaths, newPaths);
-    instance.newEndpoints = convert2EndpointList(pathDiff.getIncreased());
-    instance.missingEndpoints = convert2EndpointList(pathDiff.getMissing());
+    specificationDiffResult.setNewEndpoints(convert2EndpointList(pathDiff.getIncreased()));
+    specificationDiffResult.setMissingEndpoints(convert2EndpointList(pathDiff.getMissing()));
 
     ChangedExtensionGroup specExtDiff = extDiffer.diff(oldSpec, newSpec);
-    instance.setVendorExtsFromGroup(specExtDiff);
-    checkVendorExtsDiff(instance, specExtDiff);
+    specificationDiffResult.setVendorExtsFromGroup(specExtDiff);
+    checkVendorExtsDiff(specificationDiffResult, specExtDiff);
 
     Info oldInfo = oldSpec.getInfo();
     Info newInfo = newSpec.getInfo();
     ChangedExtensionGroup infoExtDiff = extDiffer.diff(oldInfo, newInfo);
-    instance.putSubGroup("info", infoExtDiff);
-    checkVendorExtsDiff(instance, infoExtDiff);
+    specificationDiffResult.putSubGroup("info", infoExtDiff);
+    checkVendorExtsDiff(specificationDiffResult, infoExtDiff);
 
-    if (!instance.hasContractChanges && infoHasChanges(oldInfo, newInfo)) {
-      instance.hasOnlyCosmeticChanges = true;
+    if (!specificationDiffResult.hasContractChanges() && infoHasChanges(oldInfo, newInfo)) {
+      specificationDiffResult.setHasOnlyCosmeticChanges(true);
     }
 
     List<Tag> oldTags = oldSpec.getTags();
     List<Tag> newTags = newSpec.getTags();
     ChangedExtensionGroup tagExtDiff = extDiffer.diffTagGroup(mapTagsByName(oldTags), mapTagsByName(newTags));
-    instance.putSubGroup("tags", tagExtDiff);
-    checkVendorExtsDiff(instance, tagExtDiff);
-
-    if (!instance.hasContractChanges && tagsHaveChanges(oldTags, newTags)) {
-      instance.hasOnlyCosmeticChanges = true;
-    }
+    specificationDiffResult.putSubGroup("tags", tagExtDiff);
 
     List<String> sharedKey = pathDiff.getSharedKey();
-    ChangedEndpoint changedEndpoint = null;
+    ChangedEndpoint changedEndpoint;
     for (String pathUrl : sharedKey) {
       changedEndpoint = new ChangedEndpoint();
       changedEndpoint.setPathUrl(pathUrl);
@@ -90,57 +85,57 @@ public class SpecificationDiff extends ChangedExtensionGroup {
 
       ChangedExtensionGroup pathExtDiff = extDiffer.diff(oldPath, newPath);
       changedEndpoint.setVendorExtsFromGroup(pathExtDiff);
-      checkVendorExtsDiff(instance, pathExtDiff);
+      checkVendorExtsDiff(specificationDiffResult, pathExtDiff);
 
-      // TODO: Operation diff
-      OperationDiff operationDiff = new OperationDiff(oldPath.getOperationMap(), newPath.getOperationMap(), oldSpec.getDefinitions(), newSpec.getDefinitions(), extDiffer);
-      operationDiff.diff();
-      changedEndpoint.setNewOperations(operationDiff.getIncreasedOperation());
-      changedEndpoint.setMissingOperations(operationDiff.getMissingOperation());
-      changedEndpoint.setChangedOperations(operationDiff.getChangedOperations());
-      if (operationDiff.hasOnlyCosmeticChanges() && !instance.hasContractChanges) {
-        instance.hasOnlyCosmeticChanges = true;
+      OperationsDiffResult operationsDiffResult = OperationsDiff.build(oldPath.getOperationMap(),
+          newPath.getOperationMap(),
+          oldSpec.getDefinitions(),
+          newSpec.getDefinitions(),
+          extDiffer).diff();
+      changedEndpoint.setNewOperations(operationsDiffResult.getIncreasedOperation());
+      changedEndpoint.setMissingOperations(operationsDiffResult.getMissingOperation());
+      changedEndpoint.setChangedOperations(operationsDiffResult.getChangedOperations());
+      if (operationsDiffResult.hasOnlyCosmeticChanges() && !specificationDiffResult.hasContractChanges()) {
+        specificationDiffResult.setHasOnlyCosmeticChanges(true);
       }
 
-      changedEndpoint.setNewOperations(operationDiff.getIncreasedOperation());
-      changedEndpoint.setMissingOperations(operationDiff.getMissingOperation());
-      changedEndpoint.setChangedOperations(operationDiff.getChangedOperations());
+      changedEndpoint.setNewOperations(operationsDiffResult.getIncreasedOperation());
+      changedEndpoint.setMissingOperations(operationsDiffResult.getMissingOperation());
+      changedEndpoint.setChangedOperations(operationsDiffResult.getChangedOperations());
 
-      instance.newEndpoints
-          .addAll(convert2EndpointList(changedEndpoint.getPathUrl(), changedEndpoint.getNewOperations()));
-      instance.missingEndpoints
-          .addAll(convert2EndpointList(changedEndpoint.getPathUrl(), changedEndpoint.getMissingOperations()));
+      specificationDiffResult.addNewEndpoints(convert2EndpointList(changedEndpoint.getPathUrl(), changedEndpoint.getNewOperations()));
+      specificationDiffResult.addMissingEndpoints(convert2EndpointList(changedEndpoint.getPathUrl(), changedEndpoint.getMissingOperations()));
 
       if (changedEndpoint.isDiff()) {
-        instance.changedEndpoints.add(changedEndpoint);
+        specificationDiffResult.addChangedEndpoints(Collections.singleton(changedEndpoint));
       }
-      if (changedEndpoint.hasOnlyCosmeticChanges() && !instance.hasContractChanges) {
-        instance.hasOnlyCosmeticChanges = true;
+      if (changedEndpoint.hasOnlyCosmeticChanges() && !specificationDiffResult.hasContractChanges()) {
+        specificationDiffResult.setHasOnlyCosmeticChanges(true);
       }
     }
 
     ChangedExtensionGroup securityExtDiff = extDiffer.diffSecGroup(oldSpec.getSecurityDefinitions(), newSpec.getSecurityDefinitions());
-    instance.putSubGroup("securityDefinitions", securityExtDiff);
-    checkVendorExtsDiff(instance, securityExtDiff);
+    specificationDiffResult.putSubGroup("securityDefinitions", securityExtDiff);
+    checkVendorExtsDiff(specificationDiffResult, securityExtDiff);
 
-    return instance;
+    return specificationDiffResult;
   }
 
-  private static boolean tagsHaveChanges(List<Tag> oldTags, List<Tag> newTags) {
-    Iterator<Tag> oldTagIterator = oldTags.iterator();
-    Iterator<Tag> newTagIterator = newTags.iterator();
-    boolean hasChanges = false;
-
-    while (oldTagIterator.hasNext() && newTagIterator.hasNext()) {
-      Tag oldTag = oldTagIterator.next();
-      Tag newTag = newTagIterator.next();
-      hasChanges |= !((oldTag.getDescription() == null && newTag.getDescription() == null || oldTag.getDescription().equals(newTag.getDescription())) &&
-          (oldTag.getName() == null && newTag.getName() == null || oldTag.getName().equals(newTag.getName())) &&
-          (oldTag.getExternalDocs() == null && newTag.getExternalDocs() == null || oldTag.getExternalDocs().equals(newTag.getExternalDocs())));
-    }
-
-    return hasChanges;
-  }
+//  private static boolean tagsHaveChanges(List<Tag> oldTags, List<Tag> newTags) {
+//    Iterator<Tag> oldTagIterator = oldTags.iterator();
+//    Iterator<Tag> newTagIterator = newTags.iterator();
+//    boolean hasChanges = false;
+//
+//    while (oldTagIterator.hasNext() && newTagIterator.hasNext()) {
+//      Tag oldTag = oldTagIterator.next();
+//      Tag newTag = newTagIterator.next();
+//      hasChanges |= !((oldTag.getDescription() == null && newTag.getDescription() == null || oldTag.getDescription().equals(newTag.getDescription())) &&
+//          (oldTag.getName() == null && newTag.getName() == null || oldTag.getName().equals(newTag.getName())) &&
+//          (oldTag.getExternalDocs() == null && newTag.getExternalDocs() == null || oldTag.getExternalDocs().equals(newTag.getExternalDocs())));
+//    }
+//
+//    return hasChanges;
+//  }
 
   private static boolean infoHasChanges(Info oldInfo, Info newInfo) {
     return !((oldInfo.getDescription() == null && newInfo.getDescription() == null || oldInfo.getDescription().equals(newInfo.getDescription())) &&
@@ -151,10 +146,10 @@ public class SpecificationDiff extends ChangedExtensionGroup {
         (oldInfo.getTermsOfService() == null && newInfo.getTermsOfService() == null || oldInfo.getTermsOfService().equals(newInfo.getTermsOfService())));
   }
 
-  public static void checkVendorExtsDiff(SpecificationDiff diff, ChangedExtensionGroup extDiff) {
+  public static void checkVendorExtsDiff(SpecificationDiffResult diff, ChangedExtensionGroup extDiff) {
     if (extDiff.vendorExtensionsAreDiff()) {
-      diff.hasContractChanges = true;
-      diff.hasOnlyCosmeticChanges = false;
+      diff.setHasContractChanges(true);
+      diff.setHasOnlyCosmeticChanges(false);
     }
   }
 
@@ -211,21 +206,5 @@ public class SpecificationDiff extends ChangedExtensionGroup {
       endpoints.add(endpoint);
     }
     return endpoints;
-  }
-
-  public List<Endpoint> getNewEndpoints() {
-    return newEndpoints;
-  }
-
-  public List<Endpoint> getMissingEndpoints() {
-    return missingEndpoints;
-  }
-
-  public List<ChangedEndpoint> getChangedEndpoints() {
-    return changedEndpoints;
-  }
-
-  public boolean hasOnlyCosmeticChanges() {
-    return hasOnlyCosmeticChanges;
   }
 }

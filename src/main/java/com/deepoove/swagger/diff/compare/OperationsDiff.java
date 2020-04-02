@@ -1,7 +1,6 @@
 package com.deepoove.swagger.diff.compare;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +16,7 @@ import io.swagger.models.Response;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.Property;
 
-public class OperationDiff {
-
-  private Map<HttpMethod, Operation> increasedOperations;
-  private Map<HttpMethod, Operation> missingOperations;
-  private Map<HttpMethod, ChangedOperation> changedOperations;
+public class OperationsDiff {
 
   private Map<HttpMethod, Operation> oldOperations;
   private Map<HttpMethod, Operation> newOperations;
@@ -29,30 +24,28 @@ public class OperationDiff {
   private Map<String, Model> newDefinitions;
   private VendorExtensionDiff extDiffer;
 
-  private boolean hasContractChanges;
-  private boolean hasOnlyCosmeticChanges;
-
-  public OperationDiff(Map<HttpMethod, Operation> oldOperations, Map<HttpMethod, Operation> newOperations,
-                       Map<String, Model> oldDefinitions, Map<String, Model> newDefinitions, VendorExtensionDiff extDiffer) {
-    this.increasedOperations = new HashMap<>();
-    this.missingOperations = new HashMap<>();
-    this.changedOperations = new HashMap<>();
+  private OperationsDiff(Map<HttpMethod, Operation> oldOperations, Map<HttpMethod, Operation> newOperations,
+                         Map<String, Model> oldDefinitions, Map<String, Model> newDefinitions, VendorExtensionDiff extDiffer) {
     this.oldOperations = oldOperations;
     this.newOperations = newOperations;
     this.oldDefinitions = oldDefinitions;
     this.newDefinitions = newDefinitions;
     this.extDiffer = extDiffer;
-    this.hasContractChanges = false;
-    this.hasOnlyCosmeticChanges = false;
   }
 
-  public void diff() {
+  public static OperationsDiff build(Map<HttpMethod, Operation> oldOperations, Map<HttpMethod, Operation> newOperations,
+                                     Map<String, Model> oldDefinitions, Map<String, Model> newDefinitions, VendorExtensionDiff extDiffer) {
+    return new OperationsDiff(oldOperations, newOperations, oldDefinitions, newDefinitions, extDiffer);
+  }
+
+  public OperationsDiffResult diff() {
     MapKeyDiff<HttpMethod, Operation> operationDiff = MapKeyDiff.diff(oldOperations, newOperations);
+    OperationsDiffResult diffResult = new OperationsDiffResult();
     Map<HttpMethod, Operation> increasedOperation = operationDiff.getIncreased();
     Map<HttpMethod, Operation> missingOperation = operationDiff.getMissing();
     if (!increasedOperation.isEmpty() || !missingOperation.isEmpty()) {
-      this.hasContractChanges = true;
-      this.hasOnlyCosmeticChanges = false;
+      diffResult.setHasContractChanges(true);
+      diffResult.setHasOnlyCosmeticChanges(false);
     }
 
     List<HttpMethod> sharedMethods = operationDiff.getSharedKey();
@@ -74,23 +67,22 @@ public class OperationDiff {
       changedOperation.setMissingParameters(parameterDiff.getMissing());
       changedOperation.setChangedParameters(parameterDiff.getChanged());
 
-      if (!this.hasContractChanges && parameterDiff.hasOnlyCosmeticChanges()) {
-        this.hasOnlyCosmeticChanges = true;
+      if (!diffResult.hasContractChanges() && parameterDiff.hasOnlyCosmeticChanges()) {
+        diffResult.setHasOnlyCosmeticChanges(true);
       }
 
       for (ChangedParameter param : parameterDiff.getChanged()) {
         ChangedExtensionGroup paramExtDiff = extDiffer.diff(param.getLeftParameter(), param.getRightParameter());
         param.setVendorExtsFromGroup(paramExtDiff);
         if (paramExtDiff.vendorExtensionsAreDiff()) {
-          this.hasContractChanges = true;
-          this.hasOnlyCosmeticChanges = false;
+          diffResult.setHasContractChanges(true);
+          diffResult.setHasOnlyCosmeticChanges(false);
         }
       }
 
       Property oldResponseProperty = getResponseProperty(oldOperation);
       Property newResponseProperty = getResponseProperty(newOperation);
-      PropertyDiff propertyDiff = new PropertyDiff(oldDefinitions, newDefinitions);
-      propertyDiff.diff(oldResponseProperty, newResponseProperty);
+      PropertyDiffResult propertyDiff = PropertyDiff.build(oldDefinitions, newDefinitions).diff(oldResponseProperty, newResponseProperty);
       changedOperation.setAddProps(propertyDiff.getIncreased());
       changedOperation.setMissingProps(propertyDiff.getMissing());
       changedOperation.setChangedProps(propertyDiff.getChanged());
@@ -102,17 +94,19 @@ public class OperationDiff {
       ChangedExtensionGroup responseExtDiff = extDiffer.diffResGroup(oldOperation.getResponses(), newOperation.getResponses());
       changedOperation.putSubGroup("responses", responseExtDiff);
       if (responseExtDiff.vendorExtensionsAreDiff()) {
-        this.hasContractChanges = true;
-        this.hasOnlyCosmeticChanges = false;
+        diffResult.setHasContractChanges(true);
+        diffResult.setHasOnlyCosmeticChanges(false);
       }
 
       if (changedOperation.isDiff()) {
-        this.changedOperations.put(method, changedOperation);
+        diffResult.getChangedOperations().put(method, changedOperation);
       }
-      if (!this.hasContractChanges && changedOperation.hasOnlyCosmeticChanges()) {
-        this.hasOnlyCosmeticChanges = true;
+      if (!diffResult.hasContractChanges() && changedOperation.hasOnlyCosmeticChanges()) {
+        diffResult.setHasOnlyCosmeticChanges(true);
       }
     }
+
+    return diffResult;
   }
 
   private static boolean diffOperationSummary(String oldSummary, String newSummary) {
@@ -147,21 +141,5 @@ public class OperationDiff {
     }
     Response response = responses.get("200");
     return null == response ? null : response.getSchema();
-  }
-
-  public Map<HttpMethod, Operation> getIncreasedOperation() {
-    return this.increasedOperations;
-  }
-
-  public Map<HttpMethod, Operation> getMissingOperation() {
-    return this.missingOperations;
-  }
-
-  public Map<HttpMethod, ChangedOperation> getChangedOperations() {
-    return this.changedOperations;
-  }
-
-  public boolean hasOnlyCosmeticChanges() {
-    return this.hasOnlyCosmeticChanges;
   }
 }
