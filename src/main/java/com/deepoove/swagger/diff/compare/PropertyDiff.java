@@ -37,8 +37,7 @@ public class PropertyDiff {
           : right != null
           ? ((RefProperty) right).getSimpleRef()
           : null;
-      ModelDiff modelDiff = new ModelDiff(oldDefinitions, newDefinitions);
-      modelDiff.diff(leftModel, rightModel, ref);
+      ModelDiffResult modelDiff = ModelDiff.build(oldDefinitions, newDefinitions).diff(leftModel, rightModel, ref);
       diffResult.addIncreased(modelDiff.getIncreased());
       diffResult.addMissing(modelDiff.getMissing());
       diffResult.addChanged(modelDiff.getChanged());

@@ -61,8 +61,7 @@ public class OperationsDiff {
 
       List<Parameter> oldParameters = oldOperation.getParameters();
       List<Parameter> newParameters = newOperation.getParameters();
-      ParameterDiff parameterDiff = new ParameterDiff(oldDefinitions, newDefinitions);
-      parameterDiff.diff(oldParameters, newParameters);
+      ParameterDiffResult parameterDiff = ParameterDiff.build(oldDefinitions, newDefinitions).diff(oldParameters, newParameters);
       changedOperation.setAddParameters(parameterDiff.getIncreased());
       changedOperation.setMissingParameters(parameterDiff.getMissing());
       changedOperation.setChangedParameters(parameterDiff.getChanged());
