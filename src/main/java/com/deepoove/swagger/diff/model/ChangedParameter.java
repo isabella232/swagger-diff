@@ -1,8 +1,6 @@
 package com.deepoove.swagger.diff.model;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import io.swagger.models.parameters.Parameter;

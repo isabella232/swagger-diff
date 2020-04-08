@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.deepoove.swagger.diff.model.ChangedExtensionGroup;
 import com.deepoove.swagger.diff.model.ChangedOperation;
@@ -20,17 +21,17 @@ public class OperationsDiff {
 
   private Map<HttpMethod, Operation> oldOperations;
   private Map<HttpMethod, Operation> newOperations;
-  private Map<String, Model> oldDefinitions;
-  private Map<String, Model> newDefinitions;
   private VendorExtensionDiff extDiffer;
+  private ParameterDiff paramDiffer;
+  private PropertyDiff propertyDiffer;
 
   private OperationsDiff(Map<HttpMethod, Operation> oldOperations, Map<HttpMethod, Operation> newOperations,
                          Map<String, Model> oldDefinitions, Map<String, Model> newDefinitions, VendorExtensionDiff extDiffer) {
     this.oldOperations = oldOperations;
     this.newOperations = newOperations;
-    this.oldDefinitions = oldDefinitions;
-    this.newDefinitions = newDefinitions;
     this.extDiffer = extDiffer;
+    this.paramDiffer = ParameterDiff.build(oldDefinitions, newDefinitions);
+    this.propertyDiffer = PropertyDiff.build(oldDefinitions, newDefinitions);
   }
 
   public static OperationsDiff build(Map<HttpMethod, Operation> oldOperations, Map<HttpMethod, Operation> newOperations,
@@ -61,7 +62,7 @@ public class OperationsDiff {
 
       List<Parameter> oldParameters = oldOperation.getParameters();
       List<Parameter> newParameters = newOperation.getParameters();
-      ParameterDiffResult parameterDiff = ParameterDiff.build(oldDefinitions, newDefinitions).diff(oldParameters, newParameters);
+      ParameterDiffResult parameterDiff = paramDiffer.diff(oldParameters, newParameters);
       changedOperation.setAddParameters(parameterDiff.getIncreased());
       changedOperation.setMissingParameters(parameterDiff.getMissing());
       changedOperation.setChangedParameters(parameterDiff.getChanged());
@@ -81,14 +82,15 @@ public class OperationsDiff {
 
       Property oldResponseProperty = getResponseProperty(oldOperation);
       Property newResponseProperty = getResponseProperty(newOperation);
-      PropertyDiffResult propertyDiff = PropertyDiff.build(oldDefinitions, newDefinitions).diff(oldResponseProperty, newResponseProperty);
+      PropertyDiffResult propertyDiff = propertyDiffer.diff(oldResponseProperty, newResponseProperty);
       changedOperation.setAddProps(propertyDiff.getIncreased());
       changedOperation.setMissingProps(propertyDiff.getMissing());
       changedOperation.setChangedProps(propertyDiff.getChanged());
 
       changedOperation.setChangeResponseDescription(operationResponseHasCosmeticChanges(oldOperation.getResponses().values(), newOperation.getResponses().values()));
-      changedOperation.setChangeDescription(diffOperationDescription(oldOperation.getDescription(), newOperation.getDescription()));
-      changedOperation.setChangeSummary(diffOperationSummary(oldOperation.getSummary(), newOperation.getSummary()));
+      changedOperation.setChangeDescription(!Objects.equals(oldOperation.getDescription(), newOperation.getDescription()));
+      changedOperation.setChangeSummary(!Objects.equals(oldOperation.getSummary(), newOperation.getSummary()));
+      changedOperation.setChangeOperationId(!Objects.equals(oldOperation.getOperationId(), newOperation.getOperationId()));
 
       ChangedExtensionGroup responseExtDiff = extDiffer.diffResGroup(oldOperation.getResponses(), newOperation.getResponses());
       changedOperation.putSubGroup("responses", responseExtDiff);
@@ -106,14 +108,6 @@ public class OperationsDiff {
     }
 
     return diffResult;
-  }
-
-  private static boolean diffOperationSummary(String oldSummary, String newSummary) {
-    return ((oldSummary == null) ^ (newSummary == null)) || ((oldSummary != null) && !oldSummary.equals(newSummary));
-  }
-
-  private static boolean diffOperationDescription(String oldDescription, String newDescription) {
-    return ((oldDescription == null) ^ (newDescription == null)) || ((oldDescription != null) && !oldDescription.equals(newDescription));
   }
 
   private static boolean operationResponseHasCosmeticChanges(Collection<Response> oldResponses, Collection<Response> newResponses) {

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.deepoove.swagger.diff.SwaggerDiff;
 import com.deepoove.swagger.diff.model.ChangedEndpoint;
 import com.deepoove.swagger.diff.model.ChangedExtensionGroup;
 import com.deepoove.swagger.diff.model.Endpoint;

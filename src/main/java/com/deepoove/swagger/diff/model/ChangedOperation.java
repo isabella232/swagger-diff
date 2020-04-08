@@ -21,6 +21,7 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
   private boolean isChangeDescription;
   private boolean isChangeSummary;
   private boolean isChangeResponseDescription;
+  private boolean isChangeOperationId;
 
   public List<Parameter> getAddParameters() {
     return addParameters;
@@ -90,6 +91,10 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
     isChangeResponseDescription = changeResponseDescription;
   }
 
+  public void setChangeOperationId(boolean changeOperationId) {
+    isChangeOperationId = changeOperationId;
+  }
+
   public boolean isDiff() {
     return !addParameters.isEmpty() || !missingParameters.isEmpty()
         || !changedParameters.isEmpty() || !addProps.isEmpty()
@@ -122,7 +127,7 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
         return changedParameters.stream()
             .allMatch(ChangedParameter::hasOnlyCosmeticChanges);
       } else {
-        return this.isChangeDescription || this.isChangeResponseDescription || this.isChangeSummary;
+        return this.isChangeDescription || this.isChangeResponseDescription || this.isChangeSummary || this.isChangeOperationId;
       }
     }
     return false;
