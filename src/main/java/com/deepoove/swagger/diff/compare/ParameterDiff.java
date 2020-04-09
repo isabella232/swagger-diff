@@ -92,7 +92,7 @@ public class ParameterDiff {
         }
         changedParameter.setChangeDescription(!newDescription.equals(oldDescription));
 
-        if (changedParameter.isDiff()) { //&& !changedParameter.hasOnlyCosmeticChanges()) {
+        if (changedParameter.isDiff()) {
           parameterDiffResult.addChanged(Collections.singleton(changedParameter));
         }
       }

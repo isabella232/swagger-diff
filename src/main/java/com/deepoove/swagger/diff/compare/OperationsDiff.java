@@ -40,11 +40,12 @@ public class OperationsDiff {
   }
 
   public OperationsDiffResult diff() {
-    MapKeyDiff<HttpMethod, Operation> operationDiff = MapKeyDiff.diff(oldOperations, newOperations);
     OperationsDiffResult diffResult = new OperationsDiffResult();
-    Map<HttpMethod, Operation> increasedOperation = operationDiff.getIncreased();
-    Map<HttpMethod, Operation> missingOperation = operationDiff.getMissing();
-    if (!increasedOperation.isEmpty() || !missingOperation.isEmpty()) {
+
+    MapKeyDiff<HttpMethod, Operation> operationDiff = MapKeyDiff.diff(oldOperations, newOperations);
+    diffResult.setIncreasedOperations(operationDiff.getIncreased());
+    diffResult.setMissingOperations(operationDiff.getMissing());
+    if (!operationDiff.getIncreased().isEmpty() || !operationDiff.getMissing().isEmpty()) {
       diffResult.setHasContractChanges(true);
       diffResult.setHasOnlyCosmeticChanges(false);
     }

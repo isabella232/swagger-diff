@@ -173,7 +173,6 @@ public class SwaggerDiffTest {
 
     SwaggerDiff diff = SwaggerDiff.compareV2(left, right, true);
     Assert.assertTrue(diff.hasOnlyCosmeticChanges());
-    assertEqual(diff);
   }
 
   @Test
@@ -199,7 +198,6 @@ public class SwaggerDiffTest {
 
     SwaggerDiff diff = SwaggerDiff.compareV2(left, right, true);
     Assert.assertTrue(diff.hasOnlyCosmeticChanges());
-    assertEqual(diff);
   }
 
   @Test
@@ -212,7 +210,7 @@ public class SwaggerDiffTest {
 
     SwaggerDiff diff = SwaggerDiff.compareV2(left, right, true);
     Assert.assertTrue(diff.hasOnlyCosmeticChanges());
-    assertEqual(diff);
+    Assert.assertFalse(diff.getChangedEndpoints().get(0).getChangedOperations().isEmpty());
   }
 
   @Test
@@ -251,7 +249,7 @@ public class SwaggerDiffTest {
 
     SwaggerDiff diff = SwaggerDiff.compareV2(left, right, true);
     Assert.assertTrue(diff.hasOnlyCosmeticChanges());
-    assertEqual(diff);
+    Assert.assertFalse(diff.getChangedEndpoints().get(0).getChangedOperations().isEmpty());
   }
 
   @Test
@@ -342,7 +340,7 @@ public class SwaggerDiffTest {
 
     SwaggerDiff diff = SwaggerDiff.compareV2(left, right, true);
     Assert.assertTrue(diff.hasOnlyCosmeticChanges());
-    assertEqual(diff);
+    Assert.assertFalse(diff.getChangedEndpoints().get(0).getChangedOperations().isEmpty());
   }
 
   @Test
