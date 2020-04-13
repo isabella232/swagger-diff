@@ -27,10 +27,7 @@ public class ChangedParameter extends ChangedExtensionGroup implements Changed {
   }
 
   public boolean isChangeDescription() {
-    if (this.isChangeDescription) {
-      return true;
-    }
-    return leftParameter.getDescription() != null && rightParameter.getDescription() != null && !leftParameter.getDescription().equals(rightParameter.getDescription());
+    return isChangeDescription;
   }
 
   public void setChangeDescription(boolean isChangeDescription) {

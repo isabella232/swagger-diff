@@ -369,5 +369,4 @@ public class SwaggerDiffTest {
     URL resource = Thread.currentThread().getContextClassLoader().getResource(name);
     return OBJECT_MAPPER.readTree(resource);
   }
-
 }
