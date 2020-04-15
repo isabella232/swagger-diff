@@ -53,7 +53,7 @@ public class PropertyDiff {
   }
 
   public static boolean hasOnlyCosmeticChanges(Property left, Property right) {
-    return (areNotEqual(left.getDescription(), right.getDescription()) || areNotEqual(left.getExample(), right.getExample())) &&
+    return (!areEqual(left.getDescription(), right.getDescription()) || !areEqual(left.getExample(), right.getExample())) &&
         areEqual(left.getAllowEmptyValue(), right.getAllowEmptyValue()) &&
         areEqual(left.getAccess(), right.getAccess()) &&
         areEqual(left.getTitle(), right.getTitle()) &&
@@ -64,10 +64,6 @@ public class PropertyDiff {
         areEqual(left.getVendorExtensions(), right.getVendorExtensions()) &&
         areEqual(left.getPosition(), right.getPosition()) &&
         left.getRequired() == right.getRequired();
-  }
-
-  private static boolean areNotEqual(Object left, Object right) {
-    return (left == null ^ right == null) || left != null && !left.equals(right);
   }
 
   private static boolean areEqual(Object left, Object right) {

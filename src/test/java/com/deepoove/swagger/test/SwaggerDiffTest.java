@@ -22,6 +22,7 @@ import io.swagger.models.HttpMethod;
 import io.swagger.models.License;
 import io.swagger.models.Operation;
 import io.swagger.models.Path;
+import io.swagger.models.Response;
 import io.swagger.models.Swagger;
 import io.swagger.parser.SwaggerParser;
 
@@ -354,6 +355,18 @@ public class SwaggerDiffTest {
     SwaggerDiff diff = SwaggerDiff.compareV2(left, right, true);
     Assert.assertFalse(diff.hasOnlyCosmeticChanges());
     Assert.assertFalse(diff.getChangedEndpoints().isEmpty());
+  }
+
+  @Test
+  public void changeOperation_changeResponseDescription_onlyCosmeticChanges() throws IOException {
+    SwaggerParser swaggerParser = new SwaggerParser();
+    Swagger left = swaggerParser.read(loadSpec(SWAGGER_V2_DOC1), true);
+    Swagger right = swaggerParser.read(loadSpec(SWAGGER_V2_DOC1), true);
+
+    right.getPaths().get("/pet").getOperations().get(0).getResponses().get("400").setDescription("DIFF");
+
+    SwaggerDiff diff = SwaggerDiff.compareV2(left, right, true);
+    Assert.assertTrue(diff.hasOnlyCosmeticChanges());
   }
 
   private void assertEqual(SwaggerDiff diff) {

@@ -76,15 +76,16 @@ public class ModelDiff {
             copyAndAdd(visited, leftModel, rightModel));
 
       } else if (left != null && right != null && !left.equals(right)) {
-        if (modelDiffResult.getIncreased().isEmpty() && modelDiffResult.getMissing().isEmpty() && modelDiffResult.hasOnlyCosmeticChanges() == modelDiffResult.hasACosmeticChange()) {
-          if (PropertyDiff.hasOnlyCosmeticChanges(left, right)) {
-            if (!modelDiffResult.hasACosmeticChange()) {
-              modelDiffResult.setHasACosmeticChange(true);
-              modelDiffResult.setHasOnlyCosmeticChanges(true);
-            }
+        if (modelDiffResult.getIncreased().isEmpty() && modelDiffResult.getMissing().isEmpty()) {
+          if (PropertyDiff.hasOnlyCosmeticChanges(left, right) && !modelDiffResult.hasContractChanges()) {
+            modelDiffResult.setHasOnlyCosmeticChanges(true);
           } else {
             modelDiffResult.setHasOnlyCosmeticChanges(false);
+            modelDiffResult.setHasContractChanges(true);
           }
+        } else {
+          modelDiffResult.setHasOnlyCosmeticChanges(false);
+          modelDiffResult.setHasContractChanges(true);
         }
 
         // Add a changed ElProperty if not a Reference

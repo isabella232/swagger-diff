@@ -13,14 +13,14 @@ public class ModelDiffResult {
   private List<ElProperty> changed;
 
   private boolean hasOnlyCosmeticChanges;
-  private boolean hasACosmeticChange;
+  private boolean hasContractChanges;
 
   public ModelDiffResult() {
     this.increased = new ArrayList<ElProperty>();
     this.missing = new ArrayList<ElProperty>();
     this.changed = new ArrayList<ElProperty>();
     this.hasOnlyCosmeticChanges = false;
-    this.hasACosmeticChange = false;
+    this.hasContractChanges = false;
   }
 
   public List<ElProperty> getIncreased() {
@@ -67,11 +67,11 @@ public class ModelDiffResult {
     this.hasOnlyCosmeticChanges = hasOnlyCosmeticChanges;
   }
 
-  public boolean hasACosmeticChange() {
-    return hasACosmeticChange;
+  public boolean hasContractChanges() {
+    return hasContractChanges;
   }
 
-  public void setHasACosmeticChange(boolean hasACosmeticChange) {
-    this.hasACosmeticChange = hasACosmeticChange;
+  public void setHasContractChanges(boolean hasContractChanges) {
+    this.hasContractChanges = hasContractChanges;
   }
 }
