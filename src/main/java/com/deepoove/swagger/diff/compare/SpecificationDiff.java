@@ -96,6 +96,9 @@ public class SpecificationDiff {
       changedEndpoint.setChangedOperations(operationsDiffResult.getChangedOperations());
       if (operationsDiffResult.hasOnlyCosmeticChanges() && !specificationDiffResult.hasContractChanges()) {
         specificationDiffResult.setHasOnlyCosmeticChanges(true);
+      } else if (operationsDiffResult.hasContractChanges()) {
+        specificationDiffResult.setHasContractChanges(true);
+        specificationDiffResult.setHasOnlyCosmeticChanges(false);
       }
 
       changedEndpoint.setNewOperations(operationsDiffResult.getIncreasedOperation());

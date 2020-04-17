@@ -75,7 +75,7 @@ public class OperationsDiff {
       for (ChangedParameter param : parameterDiff.getChanged()) {
         ChangedExtensionGroup paramExtDiff = extDiffer.diff(param.getLeftParameter(), param.getRightParameter());
         param.setVendorExtsFromGroup(paramExtDiff);
-        if (paramExtDiff.vendorExtensionsAreDiff()) {
+        if (paramExtDiff.vendorExtensionsAreDiff()) {// || param.hasOnlyCosmeticChanges()) {
           diffResult.setHasContractChanges(true);
           diffResult.setHasOnlyCosmeticChanges(false);
         }
