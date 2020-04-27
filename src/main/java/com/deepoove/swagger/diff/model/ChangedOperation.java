@@ -96,9 +96,9 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
   }
 
   public boolean isDiff() {
-    return !addParameters.isEmpty() || !missingParameters.isEmpty()
-        || !changedParameters.isEmpty() || !addProps.isEmpty()
-        || !missingProps.isEmpty() || !changedProps.isEmpty() || vendorExtensionsAreDiff();
+    return isDiffParam() || vendorExtensionsAreDiff()
+        || this.isChangeDescription || this.isChangeResponseDescription || this.isChangeSummary
+        || this.isChangeOperationId;
   }
 
   public boolean isDiffProp() {
@@ -121,15 +121,13 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
         || !changedParameters.isEmpty();
   }
 
+  public boolean hasContractChanges() {
+    return !addParameters.isEmpty() || !missingParameters.isEmpty()
+        || (!changedParameters.isEmpty() && changedParameters.stream().noneMatch(ChangedParameter::hasOnlyCosmeticChanges))
+        || vendorExtensionsAreDiff();
+  }
+
   public boolean hasOnlyCosmeticChanges() {
-    if (addParameters.isEmpty() && missingParameters.isEmpty() && addProps.isEmpty() && missingProps.isEmpty()) {
-      if (!changedParameters.isEmpty()) {
-        return changedParameters.stream()
-            .allMatch(ChangedParameter::hasOnlyCosmeticChanges);
-      } else {
-        return this.isChangeDescription || this.isChangeResponseDescription || this.isChangeSummary || this.isChangeOperationId;
-      }
-    }
-    return false;
+    return isDiff() && !hasContractChanges();
   }
 }

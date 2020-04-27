@@ -100,7 +100,7 @@ public class OperationsDiff {
         diffResult.setHasOnlyCosmeticChanges(false);
       }
 
-      if (changedOperation.isDiff()) {
+      if (changedOperation.isDiff() || changedOperation.isDiffProp()) {
         diffResult.getChangedOperations().put(method, changedOperation);
       }
       if (!diffResult.hasContractChanges() && changedOperation.hasOnlyCosmeticChanges()) {
@@ -114,17 +114,17 @@ public class OperationsDiff {
   private static boolean operationResponseHasCosmeticChanges(Collection<Response> oldResponses, Collection<Response> newResponses) {
     Iterator<Response> oldOpResponseIterator = oldResponses.iterator();
     Iterator<Response> newOpResponseIterator = newResponses.iterator();
-    boolean isChangeDescription = false;
+    boolean hasCosmeticChanges = false;
 
     while (oldOpResponseIterator.hasNext() && newOpResponseIterator.hasNext()) {
       String oldDescription = oldOpResponseIterator.next().getDescription();
       String newDescription = newOpResponseIterator.next().getDescription();
       if (((oldDescription == null) ^ (newDescription == null)) || ((oldDescription != null) && !oldDescription.equals(newDescription))) {
-        isChangeDescription = true;
+        hasCosmeticChanges = true;
       }
     }
 
-    return isChangeDescription;
+    return hasCosmeticChanges;
   }
 
   private static Property getResponseProperty(Operation operation) {
