@@ -2,7 +2,7 @@ package com.deepoove.swagger.diff.compare;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,39 +10,41 @@ import java.util.Map.Entry;
 
 import com.deepoove.swagger.diff.model.ChangedEndpoint;
 import com.deepoove.swagger.diff.model.ChangedExtensionGroup;
-import com.deepoove.swagger.diff.model.ChangedOperation;
-import com.deepoove.swagger.diff.model.ChangedParameter;
 import com.deepoove.swagger.diff.model.Endpoint;
 
 import io.swagger.models.HttpMethod;
+import io.swagger.models.Info;
 import io.swagger.models.Operation;
 import io.swagger.models.Path;
-import io.swagger.models.Response;
 import io.swagger.models.Swagger;
 import io.swagger.models.Tag;
-import io.swagger.models.parameters.Parameter;
-import io.swagger.models.properties.Property;
 
 /**
  * compare two Swagger
  *
  * @author Sayi
  */
-public class SpecificationDiff extends ChangedExtensionGroup {
+public class SpecificationDiff {
+  private Swagger oldSpec;
+  private Swagger newSpec;
+  private boolean withExtensions;
 
-  private List<Endpoint> newEndpoints;
-  private List<Endpoint> missingEndpoints;
-  private List<ChangedEndpoint> changedEndpoints;
-
-  private SpecificationDiff() {
+  private SpecificationDiff(Swagger oldSpec, Swagger newSpec, boolean withExtensions) {
+    this.oldSpec = oldSpec;
+    this.newSpec = newSpec;
+    this.withExtensions = withExtensions;
   }
 
-  public static SpecificationDiff diff(Swagger oldSpec, Swagger newSpec) {
-    return diff(oldSpec, newSpec, false);
+  public static SpecificationDiff build(Swagger oldSpec, Swagger newSpec) {
+    return SpecificationDiff.build(oldSpec, newSpec, false);
   }
 
-  public static SpecificationDiff diff(Swagger oldSpec, Swagger newSpec, boolean withExtensions) {
-    SpecificationDiff instance = new SpecificationDiff();
+  public static SpecificationDiff build(Swagger oldSpec, Swagger newSpec, boolean withExtensions) {
+    return new SpecificationDiff(oldSpec, newSpec, withExtensions);
+  }
+
+  public SpecificationDiffResult diff() {
+    SpecificationDiffResult specificationDiffResult = new SpecificationDiffResult();
     VendorExtensionDiff extDiffer = new VendorExtensionDiff(withExtensions);
     if (null == oldSpec || null == newSpec) {
       throw new IllegalArgumentException("cannot diff null spec.");
@@ -50,91 +52,107 @@ public class SpecificationDiff extends ChangedExtensionGroup {
     Map<String, Path> oldPaths = oldSpec.getPaths();
     Map<String, Path> newPaths = newSpec.getPaths();
     MapKeyDiff<String, Path> pathDiff = MapKeyDiff.diff(oldPaths, newPaths);
-    instance.newEndpoints = convert2EndpointList(pathDiff.getIncreased());
-    instance.missingEndpoints = convert2EndpointList(pathDiff.getMissing());
-    instance.changedEndpoints = new ArrayList<ChangedEndpoint>();
+    specificationDiffResult.setNewEndpoints(convert2EndpointList(pathDiff.getIncreased()));
+    specificationDiffResult.setMissingEndpoints(convert2EndpointList(pathDiff.getMissing()));
 
-    instance.setVendorExtsFromGroup(extDiffer.diff(oldSpec, newSpec));
-    instance.putSubGroup("info", extDiffer.diff(oldSpec.getInfo(), newSpec.getInfo()));
+    ChangedExtensionGroup specExtDiff = extDiffer.diff(oldSpec, newSpec);
+    specificationDiffResult.setVendorExtsFromGroup(specExtDiff);
+    checkVendorExtsDiff(specificationDiffResult, specExtDiff);
+
+    Info oldInfo = oldSpec.getInfo();
+    Info newInfo = newSpec.getInfo();
+    ChangedExtensionGroup infoExtDiff = extDiffer.diff(oldInfo, newInfo);
+    specificationDiffResult.putSubGroup("info", infoExtDiff);
+    checkVendorExtsDiff(specificationDiffResult, infoExtDiff);
+
+    if (!specificationDiffResult.hasContractChanges() && infoHasChanges(oldInfo, newInfo)) {
+      specificationDiffResult.setHasOnlyCosmeticChanges(true);
+    }
+
+    List<Tag> oldTags = oldSpec.getTags();
+    List<Tag> newTags = newSpec.getTags();
+    ChangedExtensionGroup tagExtDiff = extDiffer.diffTagGroup(mapTagsByName(oldTags), mapTagsByName(newTags));
+    specificationDiffResult.putSubGroup("tags", tagExtDiff);
 
     List<String> sharedKey = pathDiff.getSharedKey();
-    ChangedEndpoint changedEndpoint = null;
+    ChangedEndpoint changedEndpoint;
     for (String pathUrl : sharedKey) {
       changedEndpoint = new ChangedEndpoint();
       changedEndpoint.setPathUrl(pathUrl);
       Path oldPath = oldPaths.get(pathUrl);
       Path newPath = newPaths.get(pathUrl);
 
-      changedEndpoint.setVendorExtsFromGroup(extDiffer.diff(oldPath, newPath));
+      ChangedExtensionGroup pathExtDiff = extDiffer.diff(oldPath, newPath);
+      changedEndpoint.setVendorExtsFromGroup(pathExtDiff);
+      checkVendorExtsDiff(specificationDiffResult, pathExtDiff);
 
-      Map<HttpMethod, Operation> oldOperationMap = oldPath.getOperationMap();
-      Map<HttpMethod, Operation> newOperationMap = newPath.getOperationMap();
-      MapKeyDiff<HttpMethod, Operation> operationDiff = MapKeyDiff.diff(oldOperationMap, newOperationMap);
-      Map<HttpMethod, Operation> increasedOperation = operationDiff.getIncreased();
-      Map<HttpMethod, Operation> missingOperation = operationDiff.getMissing();
-      changedEndpoint.setNewOperations(increasedOperation);
-      changedEndpoint.setMissingOperations(missingOperation);
-
-      List<HttpMethod> sharedMethods = operationDiff.getSharedKey();
-      Map<HttpMethod, ChangedOperation> operas = new HashMap<HttpMethod, ChangedOperation>();
-      ChangedOperation changedOperation = null;
-      for (HttpMethod method : sharedMethods) {
-        changedOperation = new ChangedOperation();
-        Operation oldOperation = oldOperationMap.get(method);
-        Operation newOperation = newOperationMap.get(method);
-        changedOperation.setSummary(newOperation.getSummary());
-
-        changedOperation.setVendorExtsFromGroup(extDiffer.diff(oldOperation, newOperation));
-
-        List<Parameter> oldParameters = oldOperation.getParameters();
-        List<Parameter> newParameters = newOperation.getParameters();
-        ParameterDiff parameterDiff = ParameterDiff
-            .buildWithDefinition(oldSpec.getDefinitions(), newSpec.getDefinitions())
-            .diff(oldParameters, newParameters);
-        changedOperation.setAddParameters(parameterDiff.getIncreased());
-        changedOperation.setMissingParameters(parameterDiff.getMissing());
-        changedOperation.setChangedParameter(parameterDiff.getChanged());
-
-        for (ChangedParameter param : parameterDiff.getChanged()) {
-          param.setVendorExtsFromGroup(extDiffer.diff(param.getLeftParameter(), param.getRightParameter()));
-        }
-
-        Property oldResponseProperty = getResponseProperty(oldOperation);
-        Property newResponseProperty = getResponseProperty(newOperation);
-        PropertyDiff propertyDiff = PropertyDiff.buildWithDefinition(oldSpec.getDefinitions(),
-            newSpec.getDefinitions());
-        propertyDiff.diff(oldResponseProperty, newResponseProperty);
-        changedOperation.setAddProps(propertyDiff.getIncreased());
-        changedOperation.setMissingProps(propertyDiff.getMissing());
-        changedOperation.setChangedProps(propertyDiff.getChanged());
-
-        changedOperation.putSubGroup("responses",
-            extDiffer.diffResGroup(oldOperation.getResponses(), newOperation.getResponses()));
-
-        if (changedOperation.isDiff()) {
-          operas.put(method, changedOperation);
-        }
+      OperationsDiffResult operationsDiffResult = OperationsDiff.build(oldPath.getOperationMap(),
+          newPath.getOperationMap(),
+          oldSpec.getDefinitions(),
+          newSpec.getDefinitions(),
+          extDiffer).diff();
+      changedEndpoint.setNewOperations(operationsDiffResult.getIncreasedOperation());
+      changedEndpoint.setMissingOperations(operationsDiffResult.getMissingOperation());
+      changedEndpoint.setChangedOperations(operationsDiffResult.getChangedOperations());
+      if (operationsDiffResult.hasOnlyCosmeticChanges() && !specificationDiffResult.hasContractChanges()) {
+        specificationDiffResult.setHasOnlyCosmeticChanges(true);
+      } else if (operationsDiffResult.hasContractChanges()) {
+        specificationDiffResult.setHasContractChanges(true);
+        specificationDiffResult.setHasOnlyCosmeticChanges(false);
       }
-      changedEndpoint.setChangedOperations(operas);
 
-      instance.newEndpoints
-          .addAll(convert2EndpointList(changedEndpoint.getPathUrl(), changedEndpoint.getNewOperations()));
-      instance.missingEndpoints
-          .addAll(convert2EndpointList(changedEndpoint.getPathUrl(), changedEndpoint.getMissingOperations()));
+      changedEndpoint.setNewOperations(operationsDiffResult.getIncreasedOperation());
+      changedEndpoint.setMissingOperations(operationsDiffResult.getMissingOperation());
+      changedEndpoint.setChangedOperations(operationsDiffResult.getChangedOperations());
+
+      specificationDiffResult.addNewEndpoints(convert2EndpointList(changedEndpoint.getPathUrl(), changedEndpoint.getNewOperations()));
+      specificationDiffResult.addMissingEndpoints(convert2EndpointList(changedEndpoint.getPathUrl(), changedEndpoint.getMissingOperations()));
 
       if (changedEndpoint.isDiff()) {
-        instance.changedEndpoints.add(changedEndpoint);
+        specificationDiffResult.addChangedEndpoints(Collections.singleton(changedEndpoint));
+      }
+      if (changedEndpoint.hasOnlyCosmeticChanges() && !specificationDiffResult.hasContractChanges()) {
+        specificationDiffResult.setHasOnlyCosmeticChanges(true);
       }
     }
 
-    instance.putSubGroup("securityDefinitions",
-        extDiffer.diffSecGroup(oldSpec.getSecurityDefinitions(), newSpec.getSecurityDefinitions()));
+    ChangedExtensionGroup securityExtDiff = extDiffer.diffSecGroup(oldSpec.getSecurityDefinitions(), newSpec.getSecurityDefinitions());
+    specificationDiffResult.putSubGroup("securityDefinitions", securityExtDiff);
+    checkVendorExtsDiff(specificationDiffResult, securityExtDiff);
 
-    instance.putSubGroup("tags",
-        extDiffer.diffTagGroup(mapTagsByName(oldSpec.getTags()), mapTagsByName(newSpec.getTags())));
+    return specificationDiffResult;
+  }
 
-    return instance;
+//  private static boolean tagsHaveChanges(List<Tag> oldTags, List<Tag> newTags) {
+//    Iterator<Tag> oldTagIterator = oldTags.iterator();
+//    Iterator<Tag> newTagIterator = newTags.iterator();
+//    boolean hasChanges = false;
+//
+//    while (oldTagIterator.hasNext() && newTagIterator.hasNext()) {
+//      Tag oldTag = oldTagIterator.next();
+//      Tag newTag = newTagIterator.next();
+//      hasChanges |= !((oldTag.getDescription() == null && newTag.getDescription() == null || oldTag.getDescription().equals(newTag.getDescription())) &&
+//          (oldTag.getName() == null && newTag.getName() == null || oldTag.getName().equals(newTag.getName())) &&
+//          (oldTag.getExternalDocs() == null && newTag.getExternalDocs() == null || oldTag.getExternalDocs().equals(newTag.getExternalDocs())));
+//    }
+//
+//    return hasChanges;
+//  }
 
+  private static boolean infoHasChanges(Info oldInfo, Info newInfo) {
+    return !((oldInfo.getDescription() == null && newInfo.getDescription() == null || oldInfo.getDescription().equals(newInfo.getDescription())) &&
+        (oldInfo.getVersion() == null && newInfo.getVersion() == null || oldInfo.getVersion().equals(newInfo.getVersion())) &&
+        (oldInfo.getTitle() == null && newInfo.getTitle() == null || oldInfo.getTitle().equals(newInfo.getTitle())) &&
+        (oldInfo.getContact() == null && newInfo.getContact() == null || oldInfo.getContact().equals(newInfo.getContact())) &&
+        (oldInfo.getLicense() == null && newInfo.getLicense() == null || oldInfo.getLicense().equals(newInfo.getLicense())) &&
+        (oldInfo.getTermsOfService() == null && newInfo.getTermsOfService() == null || oldInfo.getTermsOfService().equals(newInfo.getTermsOfService())));
+  }
+
+  public static void checkVendorExtsDiff(SpecificationDiffResult diff, ChangedExtensionGroup extDiff) {
+    if (extDiff.vendorExtensionsAreDiff()) {
+      diff.setHasContractChanges(true);
+      diff.setHasOnlyCosmeticChanges(false);
+    }
   }
 
   private static Map<String, Tag> mapTagsByName(List<Tag> tags) {
@@ -146,16 +164,6 @@ public class SpecificationDiff extends ChangedExtensionGroup {
       mappedTags.put(tag.getName(), tag);
     }
     return mappedTags;
-  }
-
-  private static Property getResponseProperty(Operation operation) {
-    Map<String, Response> responses = operation.getResponses();
-    // temporary workaround for missing response messages
-    if (responses == null) {
-      return null;
-    }
-    Response response = responses.get("200");
-    return null == response ? null : response.getSchema();
   }
 
   private static List<Endpoint> convert2EndpointList(Map<String, Path> map) {
@@ -200,17 +208,5 @@ public class SpecificationDiff extends ChangedExtensionGroup {
       endpoints.add(endpoint);
     }
     return endpoints;
-  }
-
-  public List<Endpoint> getNewEndpoints() {
-    return newEndpoints;
-  }
-
-  public List<Endpoint> getMissingEndpoints() {
-    return missingEndpoints;
-  }
-
-  public List<ChangedEndpoint> getChangedEndpoints() {
-    return changedEndpoints;
   }
 }

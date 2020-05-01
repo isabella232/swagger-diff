@@ -52,11 +52,20 @@ public class ChangedParameter extends ChangedExtensionGroup implements Changed {
 
   public boolean isDiff() {
     return isChangeRequired
-        || isChangeDescription
+        || isChangeDescription()
         || !increased.isEmpty()
         || !missing.isEmpty()
         || !changed.isEmpty()
         || vendorExtensionsAreDiff();
+  }
+
+  public boolean hasOnlyCosmeticChanges() {
+    return !isChangeRequired
+        && isChangeDescription()
+        && increased.isEmpty()
+        && missing.isEmpty()
+        && changed.isEmpty()
+        && !vendorExtensionsAreDiff();
   }
 
   public List<ElProperty> getIncreased() {

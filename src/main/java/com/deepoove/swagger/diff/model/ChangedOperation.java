@@ -12,11 +12,16 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
   private List<Parameter> addParameters = new ArrayList<Parameter>();
   private List<Parameter> missingParameters = new ArrayList<Parameter>();
 
-  private List<ChangedParameter> changedParameter = new ArrayList<ChangedParameter>();
+  private List<ChangedParameter> changedParameters = new ArrayList<ChangedParameter>();
 
   private List<ElProperty> addProps = new ArrayList<ElProperty>();
   private List<ElProperty> missingProps = new ArrayList<ElProperty>();
   private List<ElProperty> changedProps = new ArrayList<ElProperty>();
+
+  private boolean isChangeDescription;
+  private boolean isChangeSummary;
+  private boolean isChangeResponseDescription;
+  private boolean isChangeOperationId;
 
   public List<Parameter> getAddParameters() {
     return addParameters;
@@ -34,12 +39,12 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
     this.missingParameters = missingParameters;
   }
 
-  public List<ChangedParameter> getChangedParameter() {
-    return changedParameter;
+  public List<ChangedParameter> getChangedParameters() {
+    return changedParameters;
   }
 
-  public void setChangedParameter(List<ChangedParameter> changedParameter) {
-    this.changedParameter = changedParameter;
+  public void setChangedParameters(List<ChangedParameter> changedParameters) {
+    this.changedParameters = changedParameters;
   }
 
   public List<ElProperty> getAddProps() {
@@ -74,12 +79,29 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
     this.summary = summary;
   }
 
-  public boolean isDiff() {
-    return !addParameters.isEmpty() || !missingParameters.isEmpty()
-        || !changedParameter.isEmpty() || !addProps.isEmpty()
-        || !missingProps.isEmpty() || !changedProps.isEmpty() || vendorExtensionsAreDiff();
+  public void setChangeDescription(boolean changeDescription) {
+    isChangeDescription = changeDescription;
   }
-  public boolean isDiffProp(  ) {
+
+  public void setChangeSummary(boolean changeSummary) {
+    isChangeSummary = changeSummary;
+  }
+
+  public void setChangeResponseDescription(boolean changeResponseDescription) {
+    isChangeResponseDescription = changeResponseDescription;
+  }
+
+  public void setChangeOperationId(boolean changeOperationId) {
+    isChangeOperationId = changeOperationId;
+  }
+
+  public boolean isDiff() {
+    return isDiffParam() || vendorExtensionsAreDiff()
+        || this.isChangeDescription || this.isChangeResponseDescription || this.isChangeSummary
+        || this.isChangeOperationId;
+  }
+
+  public boolean isDiffProp() {
     return !addProps.isEmpty()
         || !missingProps.isEmpty()
         || !changedProps.isEmpty()
@@ -94,8 +116,18 @@ public class ChangedOperation extends ChangedExtensionGroup implements Changed {
     return accumulator;
   }
 
-  public boolean isDiffParam(  ) {
+  public boolean isDiffParam() {
     return !addParameters.isEmpty() || !missingParameters.isEmpty()
-        || !changedParameter.isEmpty();
+        || !changedParameters.isEmpty();
+  }
+
+  public boolean hasContractChanges() {
+    return !addParameters.isEmpty() || !missingParameters.isEmpty()
+        || (!changedParameters.isEmpty() && changedParameters.stream().noneMatch(ChangedParameter::hasOnlyCosmeticChanges))
+        || vendorExtensionsAreDiff();
+  }
+
+  public boolean hasOnlyCosmeticChanges() {
+    return isDiff() && !hasContractChanges();
   }
 }

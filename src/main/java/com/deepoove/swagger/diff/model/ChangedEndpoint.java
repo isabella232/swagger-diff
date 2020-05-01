@@ -52,4 +52,11 @@ public class ChangedEndpoint extends ChangedExtensionGroup implements Changed {
     return !changedOperations.isEmpty() || vendorExtensionsAreDiff();
   }
 
+  public boolean hasOnlyCosmeticChanges() {
+    if (newOperations.isEmpty() && missingOperations.isEmpty() && !changedOperations.isEmpty()) {
+      return changedOperations.values().stream()
+          .allMatch(ChangedOperation::hasOnlyCosmeticChanges);
+    }
+    return false;
+  }
 }

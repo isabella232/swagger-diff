@@ -3,6 +3,7 @@ package com.deepoove.swagger.diff.compare;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -17,54 +18,48 @@ import io.swagger.models.properties.RefProperty;
 
 /**
  * compare two model
+ *
  * @author Sayi
- * @version
  */
 public class ModelDiff {
 
-  private List<ElProperty> increased;
-  private List<ElProperty> missing;
-  private List<ElProperty> changed;
+  private Map<String, Model> oldDefinitions;
+  private Map<String, Model> newDefinitions;
 
-  Map<String, Model> oldDedinitions;
-  Map<String, Model> newDedinitions;
-
-  private ModelDiff() {
-    increased = new ArrayList<ElProperty>();
-    missing = new ArrayList<ElProperty>();
-    changed = new ArrayList<ElProperty>();
+  private ModelDiff(Map<String, Model> left, Map<String, Model> right) {
+    this.oldDefinitions = left;
+    this.newDefinitions = right;
   }
 
-  public static ModelDiff buildWithDefinition(Map<String, Model> left,
-      Map<String, Model> right) {
-    ModelDiff diff = new ModelDiff();
-    diff.oldDedinitions = left;
-    diff.newDedinitions = right;
-    return diff;
+  public static ModelDiff build(Map<String, Model> left, Map<String, Model> right) {
+    return new ModelDiff(left, right);
   }
 
-  public ModelDiff diff(Model leftModel, Model rightModel) {
+  public ModelDiffResult diff(Model leftModel, Model rightModel) {
     return this.diff(leftModel, rightModel, null, null, new HashSet<Model>());
   }
 
-  public ModelDiff diff(Model leftModel, Model rightModel, String parentModel) {
+  public ModelDiffResult diff(Model leftModel, Model rightModel, String parentModel) {
     return this.diff(leftModel, rightModel, null, parentModel, new HashSet<Model>());
   }
 
-  private ModelDiff diff(Model leftModel, Model rightModel, String parentEl, String parentModel, Set<Model> visited) {
+  private ModelDiffResult diff(Model leftModel, Model rightModel, String parentEl, String parentModel, Set<Model> visited) {
+    ModelDiffResult modelDiffResult = new ModelDiffResult();
+
     // Stop recursing if both models are null
     // OR either model is already contained in the visiting history
     if ((null == leftModel && null == rightModel) || visited.contains(leftModel) || visited.contains(rightModel)) {
-      return this;
+      return modelDiffResult;
     }
+
     Map<String, Property> leftProperties = null == leftModel ? null : leftModel.getProperties();
     Map<String, Property> rightProperties = null == rightModel ? null : rightModel.getProperties();
 
     // Diff the properties
     MapKeyDiff<String, Property> propertyDiff = MapKeyDiff.diff(leftProperties, rightProperties);
 
-    increased.addAll(convert2ElPropertys(propertyDiff.getIncreased(), parentEl, parentModel));
-    missing.addAll(convert2ElPropertys(propertyDiff.getMissing(), parentEl, parentModel));
+    modelDiffResult.addIncreased(convert2ElPropertys(propertyDiff.getIncreased(), parentEl, parentModel));
+    modelDiffResult.addMissing(convert2ElPropertys(propertyDiff.getMissing(), parentEl, parentModel));
 
     // Recursively find the diff between properties
     List<String> sharedKey = propertyDiff.getSharedKey();
@@ -76,16 +71,29 @@ public class ModelDiff {
         String leftRef = ((RefProperty) left).getSimpleRef();
         String rightRef = ((RefProperty) right).getSimpleRef();
 
-        diff(oldDedinitions.get(leftRef), newDedinitions.get(rightRef),
+        diff(oldDefinitions.get(leftRef), newDefinitions.get(rightRef),
             buildElString(parentEl, key), leftRef,
             copyAndAdd(visited, leftModel, rightModel));
 
       } else if (left != null && right != null && !left.equals(right)) {
+        if (modelDiffResult.getIncreased().isEmpty() && modelDiffResult.getMissing().isEmpty()) {
+          if (PropertyDiff.hasOnlyCosmeticChanges(left, right) && !modelDiffResult.hasContractChanges()) {
+            modelDiffResult.setHasOnlyCosmeticChanges(true);
+          } else {
+            modelDiffResult.setHasOnlyCosmeticChanges(false);
+            modelDiffResult.setHasContractChanges(true);
+          }
+        } else {
+          modelDiffResult.setHasOnlyCosmeticChanges(false);
+          modelDiffResult.setHasContractChanges(true);
+        }
+
         // Add a changed ElProperty if not a Reference
-        changed.add(convert2ElProperty(key, parentEl, parentModel, left));
+        modelDiffResult.addChanged(Collections.singleton(convert2ElProperty(key, parentEl, parentModel, left)));
       }
     }
-    return this;
+
+    return modelDiffResult;
   }
 
   private Collection<? extends ElProperty> convert2ElPropertys(
@@ -118,29 +126,5 @@ public class ModelDiff {
     Set<T> newSet = new HashSet<T>(set);
     newSet.addAll(Arrays.asList(add));
     return newSet;
-  }
-
-  public List<ElProperty> getIncreased() {
-    return increased;
-  }
-
-  public void setIncreased(List<ElProperty> increased) {
-    this.increased = increased;
-  }
-
-  public List<ElProperty> getMissing() {
-    return missing;
-  }
-
-  public void setMissing(List<ElProperty> missing) {
-    this.missing = missing;
-  }
-
-  public List<ElProperty> getChanged() {
-    return changed;
-  }
-
-  public void setChanged(List<ElProperty> changed) {
-    this.changed = changed;
   }
 }

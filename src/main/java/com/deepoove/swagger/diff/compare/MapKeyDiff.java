@@ -43,7 +43,6 @@ public class MapKeyDiff<K, V> {
       if (mapRight.containsKey(leftKey)) {
         instance.increased.remove(leftKey);
         instance.sharedKey.add(leftKey);
-
       } else {
         instance.missing.put(leftKey, leftValue);
       }

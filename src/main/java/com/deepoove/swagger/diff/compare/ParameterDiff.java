@@ -1,6 +1,7 @@
 package com.deepoove.swagger.diff.compare;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -20,27 +21,21 @@ import io.swagger.models.parameters.Parameter;
  */
 public class ParameterDiff {
 
-  private List<Parameter> increased;
-  private List<Parameter> missing;
-  private List<ChangedParameter> changed;
+  private Map<String, Model> oldDefinitions;
+  private Map<String, Model> newDefinitions;
 
-  Map<String, Model> oldDedinitions;
-  Map<String, Model> newDedinitions;
-
-  private ParameterDiff() {
+  private ParameterDiff(Map<String, Model> left, Map<String, Model> right) {
+    this.oldDefinitions = left;
+    this.newDefinitions = right;
   }
 
-  public static ParameterDiff buildWithDefinition(Map<String, Model> left,
-                                                  Map<String, Model> right) {
-    ParameterDiff diff = new ParameterDiff();
-    diff.oldDedinitions = left;
-    diff.newDedinitions = right;
-    return diff;
+  public static ParameterDiff build(Map<String, Model> left, Map<String, Model> right) {
+    return new ParameterDiff(left, right);
   }
 
-  public ParameterDiff diff(List<Parameter> left,
-                            List<Parameter> right) {
-    ParameterDiff instance = new ParameterDiff();
+  public ParameterDiffResult diff(List<Parameter> left, List<Parameter> right) {
+    ParameterDiffResult parameterDiffResult = new ParameterDiffResult();
+
     if (null == left) {
       left = new ArrayList<>();
     }
@@ -48,17 +43,15 @@ public class ParameterDiff {
       right = new ArrayList<>();
     }
 
-    instance.increased = new ArrayList<>(right);
-    instance.missing = new ArrayList<>();
-    instance.changed = new ArrayList<>();
+    parameterDiffResult.addIncreased(right);
     for (Parameter leftPara : left) {
       String name = leftPara.getName();
-      int index = index(instance.increased, name);
+      int index = index(parameterDiffResult.getIncreased(), name);
       if (-1 == index) {
-        instance.missing.add(leftPara);
+        parameterDiffResult.addMissing(Collections.singleton(leftPara));
       } else {
-        Parameter rightPara = instance.increased.get(index);
-        instance.increased.remove(index);
+        Parameter rightPara = parameterDiffResult.getIncreased().get(index);
+        parameterDiffResult.removeIncreased(index);
 
         ChangedParameter changedParameter = new ChangedParameter();
         changedParameter.setLeftParameter(leftPara);
@@ -72,16 +65,16 @@ public class ParameterDiff {
           if (leftSchema instanceof RefModel && rightSchema instanceof RefModel) {
             String leftRef = ((RefModel) leftSchema).getSimpleRef();
             String rightRef = ((RefModel) rightSchema).getSimpleRef();
-            Model leftModel = oldDedinitions.get(leftRef);
-            Model rightModel = newDedinitions.get(rightRef);
+            Model leftModel = oldDefinitions.get(leftRef);
+            Model rightModel = newDefinitions.get(rightRef);
             String aRef = leftRef != null ? leftRef : rightRef;
-            ModelDiff diff = ModelDiff.buildWithDefinition(oldDedinitions, newDedinitions).diff(leftModel, rightModel, aRef);
-            changedParameter.setIncreased(diff.getIncreased());
-            changedParameter.setMissing(diff.getMissing());
-            changedParameter.setChanged(diff.getChanged());
+            ModelDiffResult modelDiff = ModelDiff.build(oldDefinitions, newDefinitions).diff(leftModel, rightModel, aRef);
+            changedParameter.setIncreased(modelDiff.getIncreased());
+            changedParameter.setMissing(modelDiff.getMissing());
+            changedParameter.setChanged(modelDiff.getChanged());
+            parameterDiffResult.setHasOnlyCosmeticChanges(modelDiff.hasOnlyCosmeticChanges());
           }
         }
-
 
         // is required
         boolean rightRequired = rightPara.getRequired();
@@ -89,29 +82,27 @@ public class ParameterDiff {
         changedParameter.setChangeRequired(leftRequired != rightRequired);
 
         // description
-        String description = rightPara.getDescription();
-        String oldPescription = leftPara.getDescription();
-        if (StringUtils.isBlank(description)) {
-          description = "";
+        String newDescription = rightPara.getDescription();
+        String oldDescription = leftPara.getDescription();
+        if (StringUtils.isBlank(newDescription)) {
+          newDescription = "";
         }
-        if (StringUtils.isBlank(oldPescription)) {
-          oldPescription = "";
+        if (StringUtils.isBlank(oldDescription)) {
+          oldDescription = "";
         }
-        changedParameter.setChangeDescription(!description.equals(oldPescription));
+        changedParameter.setChangeDescription(!newDescription.equals(oldDescription));
 
         if (changedParameter.isDiff()) {
-          instance.changed.add(changedParameter);
+          parameterDiffResult.addChanged(Collections.singleton(changedParameter));
         }
-
       }
-
     }
-    return instance;
+
+    return parameterDiffResult;
   }
 
   private static int index(List<Parameter> right, String name) {
-    int i = 0;
-    for (; i < right.size(); i++) {
+    for (int i = 0; i < right.size(); i++) {
       Parameter para = right.get(i);
       if (name.equals(para.getName())) {
         return i;
@@ -119,29 +110,4 @@ public class ParameterDiff {
     }
     return -1;
   }
-
-  public List<Parameter> getIncreased() {
-    return increased;
-  }
-
-  public void setIncreased(List<Parameter> increased) {
-    this.increased = increased;
-  }
-
-  public List<Parameter> getMissing() {
-    return missing;
-  }
-
-  public void setMissing(List<Parameter> missing) {
-    this.missing = missing;
-  }
-
-  public List<ChangedParameter> getChanged() {
-    return changed;
-  }
-
-  public void setChanged(List<ChangedParameter> changed) {
-    this.changed = changed;
-  }
-
 }

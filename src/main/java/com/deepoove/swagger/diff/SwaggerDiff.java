@@ -1,12 +1,12 @@
 package com.deepoove.swagger.diff;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.deepoove.swagger.diff.compare.SpecificationDiff;
+import com.deepoove.swagger.diff.compare.SpecificationDiffResult;
 import com.deepoove.swagger.diff.model.ChangedEndpoint;
 import com.deepoove.swagger.diff.model.ChangedExtensionGroup;
 import com.deepoove.swagger.diff.model.Endpoint;
@@ -21,14 +21,16 @@ public class SwaggerDiff {
 
   private static Logger logger = LoggerFactory.getLogger(SwaggerDiff.class);
 
-  private Swagger oldSpecSwagger;
-  private Swagger newSpecSwagger;
+  private Swagger oldSpec;
+  private Swagger newSpec;
 
   private List<Endpoint> newEndpoints;
   private List<Endpoint> missingEndpoints;
   private List<ChangedEndpoint> changedEndpoints;
 
   private ChangedExtensionGroup changedVendorExtensions;
+
+  private boolean hasOnlyCosmeticChanges;
 
   /**
    * Compare two swagger v2.0 docs by JsonNode
@@ -44,22 +46,40 @@ public class SwaggerDiff {
     return new SwaggerDiff(oldSpec, newSpec).compare(withExtensions);
   }
 
+  public static SwaggerDiff compareV2(Swagger oldSpec, Swagger newSpec) {
+    return compareV2(oldSpec, newSpec, false);
+  }
+
+  public static SwaggerDiff compareV2(Swagger oldSpec, Swagger newSpec, boolean withExtensions) {
+    return new SwaggerDiff(oldSpec, newSpec).compare(withExtensions);
+  }
+
+  private SwaggerDiff(Swagger oldSpec, Swagger newSpec) {
+    this.oldSpec = oldSpec;
+    this.newSpec = newSpec;
+    if (null == oldSpec || null == newSpec) {
+      throw new RuntimeException(
+          "cannot read api-doc from spec.");
+    }
+  }
+
   private SwaggerDiff(JsonNode oldSpec, JsonNode newSpec) {
     SwaggerParser swaggerParser = new SwaggerParser();
-    oldSpecSwagger = swaggerParser.read(oldSpec, true);
-    newSpecSwagger = swaggerParser.read(newSpec, true);
-    if (null == oldSpecSwagger || null == newSpecSwagger) {
+    this.oldSpec = swaggerParser.read(oldSpec, true);
+    this.newSpec = swaggerParser.read(newSpec, true);
+    if (null == this.oldSpec || null == this.newSpec) {
       throw new RuntimeException(
           "cannot read api-doc from spec.");
     }
   }
 
   private SwaggerDiff compare(boolean withExtensions) {
-    SpecificationDiff diff = SpecificationDiff.diff(oldSpecSwagger, newSpecSwagger, withExtensions);
+    SpecificationDiffResult diff = SpecificationDiff.build(oldSpec, newSpec, withExtensions).diff();
     this.newEndpoints = diff.getNewEndpoints();
     this.missingEndpoints = diff.getMissingEndpoints();
     this.changedEndpoints = diff.getChangedEndpoints();
     this.changedVendorExtensions = diff;
+    this.hasOnlyCosmeticChanges = diff.hasOnlyCosmeticChanges();
     return this;
   }
 
@@ -80,10 +100,14 @@ public class SwaggerDiff {
   }
 
   public String getOldVersion() {
-    return oldSpecSwagger.getInfo().getVersion();
+    return oldSpec.getInfo().getVersion();
   }
 
   public String getNewVersion() {
-    return newSpecSwagger.getInfo().getVersion();
+    return newSpec.getInfo().getVersion();
+  }
+
+  public boolean hasOnlyCosmeticChanges() {
+    return hasOnlyCosmeticChanges;
   }
 }
