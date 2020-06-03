@@ -12,7 +12,6 @@ import java.util.function.Function;
 import com.deepoove.swagger.diff.model.ChangedEndpoint;
 import com.deepoove.swagger.diff.model.ChangedExtensionGroup;
 import com.deepoove.swagger.diff.model.Endpoint;
-import com.google.common.annotations.VisibleForTesting;
 
 import io.swagger.models.HttpMethod;
 import io.swagger.models.Info;
@@ -141,7 +140,6 @@ public class SpecificationDiff {
 //    return hasChanges;
 //  }
 
-  @VisibleForTesting
   static boolean infoHasChanges(Info oldInfo, Info newInfo) {
     return hasChanges(oldInfo, newInfo,
             Info::getDescription,
