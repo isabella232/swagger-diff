@@ -7,10 +7,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import com.deepoove.swagger.diff.model.ChangedEndpoint;
 import com.deepoove.swagger.diff.model.ChangedExtensionGroup;
 import com.deepoove.swagger.diff.model.Endpoint;
+import com.google.common.annotations.VisibleForTesting;
 
 import io.swagger.models.HttpMethod;
 import io.swagger.models.Info;
@@ -139,13 +141,30 @@ public class SpecificationDiff {
 //    return hasChanges;
 //  }
 
-  private static boolean infoHasChanges(Info oldInfo, Info newInfo) {
-    return !((oldInfo.getDescription() == null && newInfo.getDescription() == null || oldInfo.getDescription().equals(newInfo.getDescription())) &&
-        (oldInfo.getVersion() == null && newInfo.getVersion() == null || oldInfo.getVersion().equals(newInfo.getVersion())) &&
-        (oldInfo.getTitle() == null && newInfo.getTitle() == null || oldInfo.getTitle().equals(newInfo.getTitle())) &&
-        (oldInfo.getContact() == null && newInfo.getContact() == null || oldInfo.getContact().equals(newInfo.getContact())) &&
-        (oldInfo.getLicense() == null && newInfo.getLicense() == null || oldInfo.getLicense().equals(newInfo.getLicense())) &&
-        (oldInfo.getTermsOfService() == null && newInfo.getTermsOfService() == null || oldInfo.getTermsOfService().equals(newInfo.getTermsOfService())));
+  @VisibleForTesting
+  static boolean infoHasChanges(Info oldInfo, Info newInfo) {
+    return hasChanges(oldInfo, newInfo,
+            Info::getDescription,
+            Info::getVersion,
+            Info::getTitle,
+            Info::getContact,
+            Info::getLicense,
+            Info::getTermsOfService
+        );
+  }
+
+  private static <T, O> boolean hasChanges(T oldItem, T newItem, Function<T, O>... fieldGetters) {
+    if (oldItem == null ^ newItem == null) {
+      return true;
+    }
+    for (Function<T, O> fieldGetter : fieldGetters) {
+      O oldField = fieldGetter.apply(oldItem);
+      O newField = fieldGetter.apply(newItem);
+      if ((oldField == null ^ newField == null) || oldField != null && !oldField.equals(newField)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public static void checkVendorExtsDiff(SpecificationDiffResult diff, ChangedExtensionGroup extDiff) {
